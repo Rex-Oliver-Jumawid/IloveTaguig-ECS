@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Bell,
   CheckCircle2,
@@ -23,6 +23,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
+import NotificationsView from '../components/NotificationsView'
+import SettingsView from '../components/SettingsView'
 
 function getInitials(name) {
   if (!name) return '??'
@@ -31,8 +33,9 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-export default function AdminDashboardPage() {
-  const { profile, signOut } = useAuth()
+export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
+  const { profile, user, signOut } = useAuth()
+  const navigate = useNavigate()
   const [applications, setApplications] = useState([])
   const [query, setQuery] = useState('')
   const [filterTab, setFilterTab] = useState('All')
@@ -42,6 +45,51 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState('')
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState(initialTab)
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
+
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
+
+  // Scroll main content to top on tab change
+  useEffect(() => {
+    const mainContent = document.querySelector('.main-content')
+    if (mainContent) {
+      mainContent.scrollTop = 0
+    }
+  }, [activeTab])
+
+  // Unread notification count loader
+  const loadUnreadCount = useCallback(async () => {
+    if (!user) return
+    const { count, error: countError } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false)
+    if (!countError) {
+      setUnreadNotificationsCount(count ?? 0)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadUnreadCount()
+  }, [user, loadUnreadCount])
+
+  // Realtime subscription for unread badge
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel('admin-notifications-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => { loadUnreadCount() }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user, loadUnreadCount])
 
   const pageSize = 5
 
@@ -270,9 +318,12 @@ export default function AdminDashboardPage() {
               <li>
                 <Link
                   to="/admin"
-                  className="nav-link active"
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  title={isSidebarMinimized ? "Dashboard" : undefined}
+                  className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('dashboard')
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? 'Dashboard' : undefined}
                 >
                   <Home className="nav-icon" />
                   {!isSidebarMinimized && <span>Dashboard</span>}
@@ -281,9 +332,12 @@ export default function AdminDashboardPage() {
               <li>
                 <Link
                   to="/admin"
-                  className="nav-link"
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  title={isSidebarMinimized ? "All Applications" : undefined}
+                  className={`nav-link ${activeTab === 'applications' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('applications')
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? 'All Applications' : undefined}
                 >
                   <FileText className="nav-icon" />
                   {!isSidebarMinimized && (
@@ -297,9 +351,12 @@ export default function AdminDashboardPage() {
               <li>
                 <Link
                   to="/admin"
-                  className="nav-link"
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  title={isSidebarMinimized ? "Pending Review" : undefined}
+                  className={`nav-link ${activeTab === 'pending' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('pending')
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? 'Pending Review' : undefined}
                 >
                   <Clock className="nav-icon" />
                   {!isSidebarMinimized && (
@@ -313,9 +370,12 @@ export default function AdminDashboardPage() {
               <li>
                 <Link
                   to="/admin"
-                  className="nav-link"
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  title={isSidebarMinimized ? "Print Queue" : undefined}
+                  className={`nav-link ${activeTab === 'printqueue' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('printqueue')
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? 'Print Queue' : undefined}
                 >
                   <Printer className="nav-icon" />
                   {!isSidebarMinimized && (
@@ -329,9 +389,12 @@ export default function AdminDashboardPage() {
               <li>
                 <Link
                   to="/admin"
-                  className="nav-link"
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  title={isSidebarMinimized ? "Applicants" : undefined}
+                  className={`nav-link ${activeTab === 'applicants' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('applicants')
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? 'Applicants' : undefined}
                 >
                   <Users className="nav-icon" />
                   {!isSidebarMinimized && <span>Applicants</span>}
@@ -340,9 +403,33 @@ export default function AdminDashboardPage() {
               <li>
                 <Link
                   to="/admin"
-                  className="nav-link"
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  title={isSidebarMinimized ? "Settings" : undefined}
+                  className={`nav-link ${activeTab === 'notifications' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('notifications')
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? 'Notifications' : undefined}
+                >
+                  <Bell className="nav-icon" />
+                  {!isSidebarMinimized && (
+                    <>
+                      <span>Notifications</span>
+                      {unreadNotificationsCount > 0 && (
+                        <span className="nav-badge">{unreadNotificationsCount}</span>
+                      )}
+                    </>
+                  )}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/admin"
+                  className={`nav-link ${activeTab === 'settings' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab('settings')
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? 'Settings' : undefined}
                 >
                   <Settings className="nav-icon" />
                   {!isSidebarMinimized && <span>Settings</span>}
@@ -366,7 +453,7 @@ export default function AdminDashboardPage() {
           <button 
             className="logout-btn" 
             onClick={signOut}
-            title={isSidebarMinimized ? "Log Out" : undefined}
+            title={isSidebarMinimized ? 'Log Out' : undefined}
           >
             <LogOut className="btn-icon" size={16} />
             {!isSidebarMinimized && <span>Log Out</span>}
@@ -383,8 +470,8 @@ export default function AdminDashboardPage() {
               type="button" 
               className="sidebar-toggle-btn-topbar" 
               onClick={() => setIsSidebarMinimized(prev => !prev)}
-              aria-label={isSidebarMinimized ? "Expand sidebar" : "Minimize sidebar"}
-              title={isSidebarMinimized ? "Expand sidebar" : "Minimize sidebar"}
+              aria-label={isSidebarMinimized ? 'Expand sidebar' : 'Minimize sidebar'}
+              title={isSidebarMinimized ? 'Expand sidebar' : 'Minimize sidebar'}
             >
               <PanelLeft />
             </button>
@@ -404,9 +491,17 @@ export default function AdminDashboardPage() {
               <ShieldCheck size={14} />
               <span>ADMIN</span>
             </span>
-            <button type="button" className="icon-btn-round notification-btn" aria-label="Notifications">
+            <button
+              type="button"
+              className={`icon-btn-round notification-btn ${activeTab === 'notifications' ? 'active' : ''}`}
+              aria-label="Notifications"
+              onClick={() => {
+                setActiveTab('notifications')
+                navigate('/admin')
+              }}
+            >
               <Bell />
-              <span className="notification-badge"></span>
+              {unreadNotificationsCount > 0 && <span className="notification-badge"></span>}
             </button>
             <button type="button" className="icon-btn-round" aria-label="Help">
               <HelpCircle />
@@ -415,416 +510,439 @@ export default function AdminDashboardPage() {
           </div>
         </header>
 
-        {/* Scrollable Content Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
-          {/* Dashboard Header */}
-          <div className="figma-admin-dashboard-header">
-            <div className="figma-admin-dashboard-title">
-              <h1>Admin <em>Dashboard</em></h1>
-              <p className="figma-admin-dashboard-subtitle">
-                Review and process business clearance requests — {formattedDate}
-              </p>
-            </div>
+        {/* ── TAB CONTENT ── */}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' ? (
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+            <NotificationsView
+              user={user}
+              applications={applications}
+              onSelectApplication={(app) => {
+                // For admin: navigate to the review page for the application
+                navigate(`/admin/applications/${app.id}`)
+              }}
+              onRefreshUnreadCount={loadUnreadCount}
+            />
           </div>
 
-          {/* Bento Layout Grid */}
-          <div className="figma-admin-bento-layout">
-            
-            {/* Left Column (Stats + Table) */}
-            <div className="figma-admin-left-col">
-              {/* Metric Cards Grid */}
-              <div className="figma-admin-stats-grid">
-                <div className="figma-admin-stat-card orange">
-                  <div className="figma-admin-stat-header">
-                    <div className="figma-admin-stat-icon-wrapper">
-                      <Clock3 size={18} />
+        ) : activeTab === 'settings' ? (
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+            <SettingsView profile={profile} user={user} />
+          </div>
+
+        ) : (
+          /* Dashboard / Applications / Pending / Print Queue / Applicants tabs */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+            {/* Dashboard Header */}
+            <div className="figma-admin-dashboard-header">
+              <div className="figma-admin-dashboard-title">
+                <h1>Admin <em>Dashboard</em></h1>
+                <p className="figma-admin-dashboard-subtitle">
+                  Review and process business clearance requests — {formattedDate}
+                </p>
+              </div>
+            </div>
+
+            {/* Bento Layout Grid */}
+            <div className="figma-admin-bento-layout">
+              
+              {/* Left Column (Stats + Table) */}
+              <div className="figma-admin-left-col">
+                {/* Metric Cards Grid */}
+                <div className="figma-admin-stats-grid">
+                  <div className="figma-admin-stat-card orange">
+                    <div className="figma-admin-stat-header">
+                      <div className="figma-admin-stat-icon-wrapper">
+                        <Clock3 size={18} />
+                      </div>
+                      <span className="figma-admin-stat-label-badge">Needs Action</span>
                     </div>
-                    <span className="figma-admin-stat-label-badge">Needs Action</span>
+                    <div className="figma-admin-stat-info">
+                      <span className="figma-admin-stat-value">{stats.pending}</span>
+                      <span className="figma-admin-stat-label">Total Pending</span>
+                    </div>
                   </div>
-                  <div className="figma-admin-stat-info">
-                    <span className="figma-admin-stat-value">{stats.pending}</span>
-                    <span className="figma-admin-stat-label">Total Pending</span>
+
+                  <div className="figma-admin-stat-card teal">
+                    <div className="figma-admin-stat-header">
+                      <div className="figma-admin-stat-icon-wrapper">
+                        <CheckCircle2 size={18} />
+                      </div>
+                      <span className="figma-admin-stat-label-badge">Today</span>
+                    </div>
+                    <div className="figma-admin-stat-info">
+                      <span className="figma-admin-stat-value">{stats.approvedToday}</span>
+                      <span className="figma-admin-stat-label">Approved Today</span>
+                    </div>
+                  </div>
+
+                  <div className="figma-admin-stat-card blue">
+                    <div className="figma-admin-stat-header">
+                      <div className="figma-admin-stat-icon-wrapper">
+                        <Printer size={18} />
+                      </div>
+                      <span className="figma-admin-stat-label-badge">In Queue</span>
+                    </div>
+                    <div className="figma-admin-stat-info">
+                      <span className="figma-admin-stat-value">{stats.queue}</span>
+                      <span className="figma-admin-stat-label">Ready to Print</span>
+                    </div>
+                  </div>
+
+                  <div className="figma-admin-stat-card green">
+                    <div className="figma-admin-stat-header">
+                      <div className="figma-admin-stat-icon-wrapper">
+                        <Clock size={18} />
+                      </div>
+                      <span className="figma-admin-stat-label-badge">Avg.</span>
+                    </div>
+                    <div className="figma-admin-stat-info">
+                      <span className="figma-admin-stat-value">
+                        {stats.average}
+                        {stats.average !== '—' && <span>d</span>}
+                      </span>
+                      <span className="figma-admin-stat-label">Avg. Processing Time</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="figma-admin-stat-card teal">
-                  <div className="figma-admin-stat-header">
-                    <div className="figma-admin-stat-icon-wrapper">
-                      <CheckCircle2 size={18} />
+                {/* Table Bento Card */}
+                <div className="figma-admin-card">
+                  <div className="figma-admin-table-header">
+                    <div className="figma-admin-table-title-row">
+                      <div className="figma-admin-table-title">
+                        <h3>Pending Applications</h3>
+                      </div>
+                      <Link to="/admin" className="figma-admin-view-all-link">
+                        <span>View All</span>
+                        <ChevronRight size={14} />
+                      </Link>
                     </div>
-                    <span className="figma-admin-stat-label-badge">Today</span>
-                  </div>
-                  <div className="figma-admin-stat-info">
-                    <span className="figma-admin-stat-value">{stats.approvedToday}</span>
-                    <span className="figma-admin-stat-label">Approved Today</span>
-                  </div>
-                </div>
 
-                <div className="figma-admin-stat-card blue">
-                  <div className="figma-admin-stat-header">
-                    <div className="figma-admin-stat-icon-wrapper">
-                      <Printer size={18} />
-                    </div>
-                    <span className="figma-admin-stat-label-badge">In Queue</span>
-                  </div>
-                  <div className="figma-admin-stat-info">
-                    <span className="figma-admin-stat-value">{stats.queue}</span>
-                    <span className="figma-admin-stat-label">Ready to Print</span>
-                  </div>
-                </div>
+                    <div className="figma-admin-filter-bar">
+                      <div className="figma-admin-tabs">
+                        <button
+                          type="button"
+                          onClick={() => setFilterTab('All')}
+                          className={`figma-admin-tab-btn ${filterTab === 'All' ? 'active' : ''}`}
+                        >
+                          All ({counts.all})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFilterTab('Pending')}
+                          className={`figma-admin-tab-btn ${filterTab === 'Pending' ? 'active' : ''}`}
+                        >
+                          Pending ({counts.pending})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFilterTab('Action Req.')}
+                          className={`figma-admin-tab-btn ${filterTab === 'Action Req.' ? 'active' : ''}`}
+                        >
+                          Action Req. ({counts.actionReq})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFilterTab('Claiming')}
+                          className={`figma-admin-tab-btn ${filterTab === 'Claiming' ? 'active' : ''}`}
+                        >
+                          Claiming ({counts.claiming})
+                        </button>
+                      </div>
 
-                <div className="figma-admin-stat-card green">
-                  <div className="figma-admin-stat-header">
-                    <div className="figma-admin-stat-icon-wrapper">
-                      <Clock size={18} />
+                      <div className="figma-admin-search-sort-bar">
+                        <div className="figma-admin-table-search">
+                          <Search size={14} />
+                          <input
+                            type="text"
+                            placeholder="Search applicant..."
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            className="figma-admin-table-search-input"
+                          />
+                        </div>
+                        <select
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value)}
+                          className="figma-admin-sort-select"
+                          aria-label="Sort applications"
+                        >
+                          <option value="newest">Newest First</option>
+                          <option value="oldest">Oldest First</option>
+                          <option value="name">Applicant Name</option>
+                        </select>
+                      </div>
                     </div>
-                    <span className="figma-admin-stat-label-badge">Avg.</span>
                   </div>
-                  <div className="figma-admin-stat-info">
-                    <span className="figma-admin-stat-value">
-                      {stats.average}
-                      {stats.average !== '—' && <span>d</span>}
-                    </span>
-                    <span className="figma-admin-stat-label">Avg. Processing Time</span>
-                  </div>
+
+                  {/* Table Content */}
+                  {loading ? (
+                    <p className="admin-empty">Loading applications…</p>
+                  ) : error ? (
+                    <p className="admin-error">{error}</p>
+                  ) : sortedApplications.length === 0 ? (
+                    <p className="admin-empty">No pending applications match these filters.</p>
+                  ) : (
+                    <>
+                      <div className="figma-admin-table-wrap">
+                        <table className="figma-admin-table">
+                          <thead>
+                            <tr>
+                              <th>Applicant</th>
+                              <th>App ID</th>
+                              <th>Business Type</th>
+                              <th>Submitted</th>
+                              <th>Status</th>
+                              <th style={{ textAlign: 'right' }}>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedApplications.map((item) => (
+                              <tr key={item.id}>
+                                <td>
+                                  <div className="figma-admin-applicant-cell">
+                                    <div className="figma-admin-applicant-avatar">
+                                      {getInitials(item.owner_full_name)}
+                                    </div>
+                                    <div className="figma-admin-applicant-details">
+                                      <span className="figma-admin-applicant-name">
+                                        {item.owner_full_name}
+                                      </span>
+                                      <span className="figma-admin-applicant-business">
+                                        {item.business_name}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <Link to={`/admin/applications/${item.id}`} className="figma-admin-appid-link">
+                                    APP-{item.created_at ? new Date(item.created_at).getFullYear() : '2026'}-{item.id.slice(0, 4).toUpperCase()}
+                                  </Link>
+                                </td>
+                                <td>{item.application_type || 'New'}</td>
+                                <td>
+                                  <div>{new Date(item.created_at).toLocaleDateString()}</div>
+                                  <div className="figma-admin-time-subtext">
+                                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className={`figma-admin-status-pill ${getStatusClass(item.status)}`}>
+                                    {getStatusLabel(item.status)}
+                                  </span>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <div className="figma-admin-action-cell">
+                                    <Link to={`/admin/applications/${item.id}`} className="figma-admin-table-action-btn">
+                                      <Eye size={12} />
+                                      <span>Review</span>
+                                    </Link>
+                                    {['Approved', 'Proceed to Barangay Hall'].includes(item.status) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePrint(item)}
+                                        className="figma-admin-icon-action-btn"
+                                        title="Print clearance"
+                                      >
+                                        <Printer size={12} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination */}
+                      <div className="figma-admin-pagination">
+                        <div className="figma-admin-pagination-info">
+                          Showing <strong>{sortedApplications.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</strong>-
+                          <strong>{Math.min(currentPage * pageSize, sortedApplications.length)}</strong> of <strong>{sortedApplications.length}</strong> applications
+                        </div>
+                        <div className="figma-admin-pagination-nav">
+                          <button
+                            type="button"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            className="figma-admin-pagination-btn"
+                            aria-label="Previous page"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+                          {[...Array(totalPages)].map((_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setCurrentPage(i + 1)}
+                              className={`figma-admin-pagination-btn ${currentPage === i + 1 ? 'active' : ''}`}
+                            >
+                              {i + 1}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            className="figma-admin-pagination-btn"
+                            aria-label="Next page"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Table Bento Card */}
-              <div className="figma-admin-card">
-                <div className="figma-admin-table-header">
-                  <div className="figma-admin-table-title-row">
-                    <div className="figma-admin-table-title">
-                      <h3>Pending Applications</h3>
+              {/* Right Column sidebar widgets */}
+              <div className="figma-admin-right-col">
+                {/* Avg processing Card */}
+                <div className="figma-admin-avg-card">
+                  <div className="figma-admin-avg-card-glow"></div>
+                  <h3>Avg. Processing Time</h3>
+                  <div className="figma-admin-avg-card-value">
+                    <span className="figma-admin-avg-card-number">{stats.average}</span>
+                    <span className="figma-admin-avg-card-subtext">days this month</span>
+                  </div>
+                  <div className="figma-admin-avg-card-grid">
+                    <div className="figma-admin-avg-card-col">
+                      <span className="figma-admin-avg-card-col-value">{stats.approvedToday}</span>
+                      <span className="figma-admin-avg-card-col-label">Approved today</span>
                     </div>
-                    <Link to="/admin" className="figma-admin-view-all-link">
-                      <span>View All</span>
-                      <ChevronRight size={14} />
+                    <div className="figma-admin-avg-card-col">
+                      <span className="figma-admin-avg-card-col-value">{stats.pending}</span>
+                      <span className="figma-admin-avg-card-col-label">Total pending</span>
+                    </div>
+                    <div className="figma-admin-avg-card-col">
+                      <span className="figma-admin-avg-card-col-value">{stats.queue}</span>
+                      <span className="figma-admin-avg-card-col-label">Print queue</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Breakdown Card */}
+                <div className="figma-admin-card figma-admin-breakdown-card">
+                  <h3>Status Breakdown</h3>
+                  <div className="figma-admin-breakdown-list">
+                    <div className="figma-admin-breakdown-item">
+                      <div className="figma-admin-breakdown-label-wrapper">
+                        <span className="figma-admin-breakdown-dot orange"></span>
+                        <span className="figma-admin-breakdown-label">Pending Review</span>
+                      </div>
+                      <div className="figma-admin-breakdown-track">
+                        <div
+                          className="figma-admin-breakdown-bar orange"
+                          style={{ width: `${counts.total > 0 ? (counts.pending / counts.total) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                      <span className="figma-admin-breakdown-count">{counts.pending}</span>
+                    </div>
+
+                    <div className="figma-admin-breakdown-item">
+                      <div className="figma-admin-breakdown-label-wrapper">
+                        <span className="figma-admin-breakdown-dot red"></span>
+                        <span className="figma-admin-breakdown-label">Action Required</span>
+                      </div>
+                      <div className="figma-admin-breakdown-track">
+                        <div
+                          className="figma-admin-breakdown-bar red"
+                          style={{ width: `${counts.total > 0 ? (counts.actionReq / counts.total) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                      <span className="figma-admin-breakdown-count">{counts.actionReq}</span>
+                    </div>
+
+                    <div className="figma-admin-breakdown-item">
+                      <div className="figma-admin-breakdown-label-wrapper">
+                        <span className="figma-admin-breakdown-dot blue"></span>
+                        <span className="figma-admin-breakdown-label">Ready for Claiming</span>
+                      </div>
+                      <div className="figma-admin-breakdown-track">
+                        <div
+                          className="figma-admin-breakdown-bar blue"
+                          style={{ width: `${counts.total > 0 ? (counts.claiming / counts.total) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                      <span className="figma-admin-breakdown-count">{counts.claiming}</span>
+                    </div>
+
+                    <div className="figma-admin-breakdown-item" style={{ borderTop: '1px solid #F3F4F6', paddingTop: '8px' }}>
+                      <div className="figma-admin-breakdown-label-wrapper">
+                        <span className="figma-admin-breakdown-dot teal"></span>
+                        <span className="figma-admin-breakdown-label">Approved (all time)</span>
+                      </div>
+                      <div className="figma-admin-breakdown-track">
+                        <div
+                          className="figma-admin-breakdown-bar teal"
+                          style={{ width: '100%' }}
+                        ></div>
+                      </div>
+                      <span className="figma-admin-breakdown-count">
+                        {applications.filter(item => ['Approved', 'Proceed to Barangay Hall', 'Complete'].includes(item.status)).length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions Card */}
+                <div className="figma-admin-card figma-admin-breakdown-card figma-admin-quick-actions">
+                  <h3>Quick Actions</h3>
+                  <div className="figma-admin-action-list">
+                    <Link to="/admin" className="figma-admin-action-link">
+                      <div className="figma-admin-action-icon-box">
+                        <Printer size={18} />
+                      </div>
+                      <div className="figma-admin-action-info">
+                        <span className="figma-admin-action-title">Print Queue ({counts.claiming})</span>
+                        <span className="figma-admin-action-desc">Clearances ready to print</span>
+                      </div>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleExportCSV}
+                      className="figma-admin-action-link"
+                      style={{ background: 'transparent', textAlign: 'left', width: '100%', cursor: 'pointer' }}
+                    >
+                      <div className="figma-admin-action-icon-box">
+                        <Download size={18} />
+                      </div>
+                      <div className="figma-admin-action-info">
+                        <span className="figma-admin-action-title">Export Reports</span>
+                        <span className="figma-admin-action-desc">Download application data as CSV</span>
+                      </div>
+                    </button>
+                    <Link to="/admin" className="figma-admin-action-link">
+                      <div className="figma-admin-action-icon-box">
+                        <Users size={18} />
+                      </div>
+                      <div className="figma-admin-action-info">
+                        <span className="figma-admin-action-title">Manage Applicants</span>
+                        <span className="figma-admin-action-desc">View registered business owners</span>
+                      </div>
                     </Link>
                   </div>
-
-                  <div className="figma-admin-filter-bar">
-                    <div className="figma-admin-tabs">
-                      <button
-                        type="button"
-                        onClick={() => setFilterTab('All')}
-                        className={`figma-admin-tab-btn ${filterTab === 'All' ? 'active' : ''}`}
-                      >
-                        All ({counts.all})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFilterTab('Pending')}
-                        className={`figma-admin-tab-btn ${filterTab === 'Pending' ? 'active' : ''}`}
-                      >
-                        Pending ({counts.pending})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFilterTab('Action Req.')}
-                        className={`figma-admin-tab-btn ${filterTab === 'Action Req.' ? 'active' : ''}`}
-                      >
-                        Action Req. ({counts.actionReq})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFilterTab('Claiming')}
-                        className={`figma-admin-tab-btn ${filterTab === 'Claiming' ? 'active' : ''}`}
-                      >
-                        Claiming ({counts.claiming})
-                      </button>
-                    </div>
-
-                    <div className="figma-admin-search-sort-bar">
-                      <div className="figma-admin-table-search">
-                        <Search size={14} />
-                        <input
-                          type="text"
-                          placeholder="Search applicant..."
-                          value={query}
-                          onChange={(e) => setQuery(e.target.value)}
-                          className="figma-admin-table-search-input"
-                        />
-                      </div>
-                      <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                        className="figma-admin-sort-select"
-                        aria-label="Sort applications"
-                      >
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="name">Applicant Name</option>
-                      </select>
-                    </div>
-                  </div>
                 </div>
-
-                {/* Table Content */}
-                {loading ? (
-                  <p className="admin-empty">Loading applications…</p>
-                ) : error ? (
-                  <p className="admin-error">{error}</p>
-                ) : sortedApplications.length === 0 ? (
-                  <p className="admin-empty">No pending applications match these filters.</p>
-                ) : (
-                  <>
-                    <div className="figma-admin-table-wrap">
-                      <table className="figma-admin-table">
-                        <thead>
-                          <tr>
-                            <th>Applicant</th>
-                            <th>App ID</th>
-                            <th>Business Type</th>
-                            <th>Submitted</th>
-                            <th>Status</th>
-                            <th style={{ textAlign: 'right' }}>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {paginatedApplications.map((item) => (
-                            <tr key={item.id}>
-                              <td>
-                                <div className="figma-admin-applicant-cell">
-                                  <div className="figma-admin-applicant-avatar">
-                                    {getInitials(item.owner_full_name)}
-                                  </div>
-                                  <div className="figma-admin-applicant-details">
-                                    <span className="figma-admin-applicant-name">
-                                      {item.owner_full_name}
-                                    </span>
-                                    <span className="figma-admin-applicant-business">
-                                      {item.business_name}
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>
-                                <Link to={`/admin/applications/${item.id}`} className="figma-admin-appid-link">
-                                  APP-{item.created_at ? new Date(item.created_at).getFullYear() : '2026'}-{item.id.slice(0, 4).toUpperCase()}
-                                </Link>
-                              </td>
-                              <td>{item.application_type || 'New'}</td>
-                              <td>
-                                <div>{new Date(item.created_at).toLocaleDateString()}</div>
-                                <div className="figma-admin-time-subtext">
-                                  {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                              </td>
-                              <td>
-                                <span className={`figma-admin-status-pill ${getStatusClass(item.status)}`}>
-                                  {getStatusLabel(item.status)}
-                                </span>
-                              </td>
-                              <td style={{ textAlign: 'right' }}>
-                                <div className="figma-admin-action-cell">
-                                  <Link to={`/admin/applications/${item.id}`} className="figma-admin-table-action-btn">
-                                    <Eye size={12} />
-                                    <span>Review</span>
-                                  </Link>
-                                  {['Approved', 'Proceed to Barangay Hall'].includes(item.status) && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handlePrint(item)}
-                                      className="figma-admin-icon-action-btn"
-                                      title="Print clearance"
-                                    >
-                                      <Printer size={12} />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Pagination */}
-                    <div className="figma-admin-pagination">
-                      <div className="figma-admin-pagination-info">
-                        Showing <strong>{sortedApplications.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</strong>-
-                        <strong>{Math.min(currentPage * pageSize, sortedApplications.length)}</strong> of <strong>{sortedApplications.length}</strong> applications
-                      </div>
-                      <div className="figma-admin-pagination-nav">
-                        <button
-                          type="button"
-                          disabled={currentPage === 1}
-                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                          className="figma-admin-pagination-btn"
-                          aria-label="Previous page"
-                        >
-                          <ChevronLeft size={16} />
-                        </button>
-                        {[...Array(totalPages)].map((_, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => setCurrentPage(i + 1)}
-                            className={`figma-admin-pagination-btn ${currentPage === i + 1 ? 'active' : ''}`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          disabled={currentPage === totalPages}
-                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                          className="figma-admin-pagination-btn"
-                          aria-label="Next page"
-                        >
-                          <ChevronRight size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
               </div>
+
             </div>
 
-            {/* Right Column sidebar widgets */}
-            <div className="figma-admin-right-col">
-              {/* Avg processing Card */}
-              <div className="figma-admin-avg-card">
-                <div className="figma-admin-avg-card-glow"></div>
-                <h3>Avg. Processing Time</h3>
-                <div className="figma-admin-avg-card-value">
-                  <span className="figma-admin-avg-card-number">{stats.average}</span>
-                  <span className="figma-admin-avg-card-subtext">days this month</span>
-                </div>
-                <div className="figma-admin-avg-card-grid">
-                  <div className="figma-admin-avg-card-col">
-                    <span className="figma-admin-avg-card-col-value">{stats.approvedToday}</span>
-                    <span className="figma-admin-avg-card-col-label">Approved today</span>
-                  </div>
-                  <div className="figma-admin-avg-card-col">
-                    <span className="figma-admin-avg-card-col-value">{stats.pending}</span>
-                    <span className="figma-admin-avg-card-col-label">Total pending</span>
-                  </div>
-                  <div className="figma-admin-avg-card-col">
-                    <span className="figma-admin-avg-card-col-value">{stats.queue}</span>
-                    <span className="figma-admin-avg-card-col-label">Print queue</span>
-                  </div>
-                </div>
+            {/* Footer */}
+            <footer className="figma-admin-footer">
+              <span className="figma-admin-footer-left">ILoveTaguig ECS</span>
+              <span>© 2026 City of Taguig. All rights reserved.</span>
+              <div className="figma-admin-footer-links">
+                <Link to="/admin">Privacy Policy</Link>
+                <Link to="/admin">Terms of Service</Link>
+                <Link to="/admin">Contact Support</Link>
               </div>
-
-              {/* Status Breakdown Card */}
-              <div className="figma-admin-card figma-admin-breakdown-card">
-                <h3>Status Breakdown</h3>
-                <div className="figma-admin-breakdown-list">
-                  <div className="figma-admin-breakdown-item">
-                    <div className="figma-admin-breakdown-label-wrapper">
-                      <span className="figma-admin-breakdown-dot orange"></span>
-                      <span className="figma-admin-breakdown-label">Pending Review</span>
-                    </div>
-                    <div className="figma-admin-breakdown-track">
-                      <div
-                        className="figma-admin-breakdown-bar orange"
-                        style={{ width: `${counts.total > 0 ? (counts.pending / counts.total) * 100 : 0}%` }}
-                      ></div>
-                    </div>
-                    <span className="figma-admin-breakdown-count">{counts.pending}</span>
-                  </div>
-
-                  <div className="figma-admin-breakdown-item">
-                    <div className="figma-admin-breakdown-label-wrapper">
-                      <span className="figma-admin-breakdown-dot red"></span>
-                      <span className="figma-admin-breakdown-label">Action Required</span>
-                    </div>
-                    <div className="figma-admin-breakdown-track">
-                      <div
-                        className="figma-admin-breakdown-bar red"
-                        style={{ width: `${counts.total > 0 ? (counts.actionReq / counts.total) * 100 : 0}%` }}
-                      ></div>
-                    </div>
-                    <span className="figma-admin-breakdown-count">{counts.actionReq}</span>
-                  </div>
-
-                  <div className="figma-admin-breakdown-item">
-                    <div className="figma-admin-breakdown-label-wrapper">
-                      <span className="figma-admin-breakdown-dot blue"></span>
-                      <span className="figma-admin-breakdown-label">Ready for Claiming</span>
-                    </div>
-                    <div className="figma-admin-breakdown-track">
-                      <div
-                        className="figma-admin-breakdown-bar blue"
-                        style={{ width: `${counts.total > 0 ? (counts.claiming / counts.total) * 100 : 0}%` }}
-                      ></div>
-                    </div>
-                    <span className="figma-admin-breakdown-count">{counts.claiming}</span>
-                  </div>
-
-                  <div className="figma-admin-breakdown-item" style={{ borderTop: '1px solid #F3F4F6', paddingTop: '8px' }}>
-                    <div className="figma-admin-breakdown-label-wrapper">
-                      <span className="figma-admin-breakdown-dot teal"></span>
-                      <span className="figma-admin-breakdown-label">Approved (all time)</span>
-                    </div>
-                    <div className="figma-admin-breakdown-track">
-                      <div
-                        className="figma-admin-breakdown-bar teal"
-                        style={{ width: '100%' }}
-                      ></div>
-                    </div>
-                    <span className="figma-admin-breakdown-count">
-                      {applications.filter(item => ['Approved', 'Proceed to Barangay Hall', 'Complete'].includes(item.status)).length}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions Card */}
-              <div className="figma-admin-card figma-admin-breakdown-card figma-admin-quick-actions">
-                <h3>Quick Actions</h3>
-                <div className="figma-admin-action-list">
-                  <Link to="/admin" className="figma-admin-action-link">
-                    <div className="figma-admin-action-icon-box">
-                      <Printer size={18} />
-                    </div>
-                    <div className="figma-admin-action-info">
-                      <span className="figma-admin-action-title">Print Queue ({counts.claiming})</span>
-                      <span className="figma-admin-action-desc">Clearances ready to print</span>
-                    </div>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleExportCSV}
-                    className="figma-admin-action-link"
-                    style={{ background: 'transparent', textAlign: 'left', width: '100%', cursor: 'pointer' }}
-                  >
-                    <div className="figma-admin-action-icon-box">
-                      <Download size={18} />
-                    </div>
-                    <div className="figma-admin-action-info">
-                      <span className="figma-admin-action-title">Export Reports</span>
-                      <span className="figma-admin-action-desc">Download application data as CSV</span>
-                    </div>
-                  </button>
-                  <Link to="/admin" className="figma-admin-action-link">
-                    <div className="figma-admin-action-icon-box">
-                      <Users size={18} />
-                    </div>
-                    <div className="figma-admin-action-info">
-                      <span className="figma-admin-action-title">Manage Applicants</span>
-                      <span className="figma-admin-action-desc">View registered business owners</span>
-                    </div>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
+            </footer>
           </div>
-
-          {/* Footer */}
-          <footer className="figma-admin-footer">
-            <span className="figma-admin-footer-left">ILoveTaguig ECS</span>
-            <span>© 2026 City of Taguig. All rights reserved.</span>
-            <div className="figma-admin-footer-links">
-              <Link to="/admin">Privacy Policy</Link>
-              <Link to="/admin">Terms of Service</Link>
-              <Link to="/admin">Contact Support</Link>
-            </div>
-          </footer>
-        </div>
+        )}
       </main>
     </div>
   )

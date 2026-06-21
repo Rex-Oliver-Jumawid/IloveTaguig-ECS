@@ -30,7 +30,9 @@ export default function App() {
           <Route path="/owner/notifications" element={<OwnerDashboardPage initialTab="notifications" />} />
         </Route>
         <Route element={<ProtectedRoute role="admin" />}>
-          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin" element={<AdminDashboardPage initialTab="dashboard" />} />
+          <Route path="/admin/notifications" element={<AdminDashboardPage initialTab="notifications" />} />
+          <Route path="/admin/settings" element={<AdminDashboardPage initialTab="settings" />} />
           <Route path="/admin/applications/:applicationId" element={<AdminApplicationReviewPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/auth" replace />} />
