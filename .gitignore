@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.env
+.env.local
+.DS_Store
+supabase/.temp/
+
+# Private configuration, planning, and system context
+.context/
+.plan/
+context/
+.systeminfo/
+
+# Private documentation
+docs/
+
+# Keep all Markdown source files out of the public repository, including README files
+*.md
