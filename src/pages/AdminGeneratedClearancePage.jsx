@@ -74,9 +74,7 @@ export default function AdminGeneratedClearancePage() {
     }
     const { data: urlData, error: urlError } = await supabase.storage
       .from('generated-clearances')
-      .createSignedUrl(data.generated_clearance_path, 300, {
-        download: clearanceFilename(data),
-      })
+      .createSignedUrl(data.generated_clearance_path, 300)
     if (urlError) {
       setError('The private PDF link could not be created.')
       setLoading(false)
@@ -95,9 +93,7 @@ export default function AdminGeneratedClearancePage() {
     setRefreshing(true)
     const { data, error: urlError } = await supabase.storage
       .from('generated-clearances')
-      .createSignedUrl(clearance.generated_clearance_path, 300, {
-        download: clearanceFilename(clearance),
-      })
+      .createSignedUrl(clearance.generated_clearance_path, 300)
     if (!urlError && data?.signedUrl) {
       setSignedUrl(data.signedUrl)
     } else {
@@ -121,28 +117,25 @@ export default function AdminGeneratedClearancePage() {
     navigate('/admin')
   }
 
-  // ── Download PDF directly from private Storage with a stable filename ──
+  // ── Download PDF through an attachment-only signed URL ─────────────
   async function downloadPdf() {
     if (!clearance?.generated_clearance_path) return
     setDownloading(true)
     setError('')
     try {
+      const filename = clearanceFilename(clearance)
       const { data, error: downloadError } = await supabase.storage
         .from('generated-clearances')
-        .download(clearance.generated_clearance_path)
-      if (downloadError || !data) throw downloadError || new Error('PDF download returned no data')
-
-      const pdfBlob = new Blob([await data.arrayBuffer()], { type: 'application/pdf' })
-      const blobUrl = URL.createObjectURL(pdfBlob)
-      const filename = clearanceFilename(clearance)
+        .createSignedUrl(clearance.generated_clearance_path, 60, { download: filename })
+      if (downloadError || !data?.signedUrl) {
+        throw downloadError || new Error('PDF download link was not created')
+      }
       const anchor = document.createElement('a')
-      anchor.href = blobUrl
+      anchor.href = data.signedUrl
       anchor.download = filename
-      anchor.type = 'application/pdf'
       document.body.appendChild(anchor)
       anchor.click()
       document.body.removeChild(anchor)
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
     } catch {
       setError('Could not download the PDF. Please try refreshing the link.')
     } finally {
