@@ -26,6 +26,7 @@ import {
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import ApplicationStatusView from '../components/ApplicationStatusView'
+import SettingsView from '../components/SettingsView'
 
 export default function OwnerDashboardPage() {
   const { profile, user, signOut } = useAuth()
@@ -313,10 +314,16 @@ export default function OwnerDashboardPage() {
                 </Link>
               </li>
               <li>
-                <a href="#settings" className="nav-link" onClick={triggerHistory} title={isSidebarMinimized ? "Settings" : undefined}>
+                <button
+                  type="button"
+                  className={`nav-link ${activeTab === 'settings' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('settings')}
+                  title={isSidebarMinimized ? "Settings" : undefined}
+                  style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
+                >
                   <Settings className="nav-icon" />
                   {!isSidebarMinimized && <span>Settings</span>}
-                </a>
+                </button>
               </li>
             </ul>
           </nav>
@@ -382,7 +389,7 @@ export default function OwnerDashboardPage() {
               <span className="notification-badge"></span>
             </button>
             
-            <button className="icon-btn-round" aria-label="Settings" onClick={triggerHistory}>
+            <button className="icon-btn-round" aria-label="Settings" onClick={() => setActiveTab('settings')}>
               <Settings />
             </button>
             
@@ -667,6 +674,10 @@ export default function OwnerDashboardPage() {
               </section>
             </div>
           </>
+        ) : activeTab === 'settings' ? (
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+            <SettingsView profile={profile} user={user} />
+          </div>
         ) : (
           <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
             {currentActiveApp ? (
@@ -693,7 +704,7 @@ export default function OwnerDashboardPage() {
               </div>
             )}
           </div>
-        )}
+        ) }
 
         {/* Footer */}
         <footer className="dashboard-footer">
