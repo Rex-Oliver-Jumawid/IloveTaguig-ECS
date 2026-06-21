@@ -698,8 +698,10 @@ export default function OwnerDashboardPage() {
                 <h3>No clearance applications found</h3>
                 <p>Submit a new application to get started with your Barangay Business Clearance.</p>
                 <Link to="/owner/applications/new" className="owner-primary-action" style={{ marginTop: '16px' }}>
-                  <span>NEW APPLICATION</span>
-                  <Plus className="btn-icon" size={16} />
+                  NEW APPLICATION
+                  <span>
+                    <Plus className="btn-icon" size={16} />
+                  </span>
                 </Link>
               </div>
             )}
