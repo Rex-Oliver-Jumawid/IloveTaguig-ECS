@@ -221,7 +221,11 @@ export default function ApplicationStatusView({
               </div>
               <div className="alert-text-wrap">
                 <h5>Action Required</h5>
-                <p>Your application requires additional supporting documents before it can be processed. Please upload the missing files and resubmit.</p>
+                <p>
+                  {application.remarks
+                    ? application.remarks
+                    : 'Your application requires additional supporting documents before it can be processed. Please upload the corrected files and resubmit.'}
+                </p>
               </div>
             </div>
           )}
@@ -350,21 +354,18 @@ export default function ApplicationStatusView({
                   let statusBadge = 'Verified'
                   let statusClass = 'verified'
 
-                  if (application.status === 'Pending Review' || application.status === 'Under Review') {
+                  if (application.status === 'Pending Review') {
                     statusBadge = 'Awaiting Review'
                     statusClass = 'pending'
                   } else if (application.status === 'Action Required') {
-                    if (isExpired) {
-                      statusBadge = 'Needs Update'
-                      statusClass = 'needs-update'
-                    } else {
-                      statusBadge = 'Verified'
-                      statusClass = 'verified'
-                    }
-                  } else if (application.status === 'Rejected') {
+                    // All docs need correction when admin flags the application
                     statusBadge = 'Needs Update'
                     statusClass = 'needs-update'
+                  } else if (application.status === 'Rejected') {
+                    statusBadge = 'Not Accepted'
+                    statusClass = 'needs-update'
                   }
+                  // 'Approved', 'Proceed to Barangay Hall', 'Complete' → stays 'Verified'
 
                   return (
                     <div key={document.id} className="doc-row-figma">

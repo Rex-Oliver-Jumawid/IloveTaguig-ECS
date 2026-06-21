@@ -25,6 +25,8 @@ import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import NotificationsView from '../components/NotificationsView'
 import SettingsView from '../components/SettingsView'
+import HistoryView from '../components/HistoryView'
+import OwnersView from '../components/OwnersView'
 
 function getInitials(name) {
   if (!name) return '??'
@@ -47,6 +49,13 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState(initialTab)
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
+  const [owners, setOwners] = useState([])
+  const [selectedOwnerFilter, setSelectedOwnerFilter] = useState(null)
+
+  const filteredApplicationsByOwner = useMemo(() => {
+    if (!selectedOwnerFilter) return applications
+    return applications.filter(app => app.owner_id === selectedOwnerFilter.id)
+  }, [applications, selectedOwnerFilter])
 
   useEffect(() => {
     setActiveTab(initialTab)
@@ -104,6 +113,26 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const loadOwners = useCallback(async () => {
+    const { data, error: ownersError } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        full_name,
+        initials,
+        created_at,
+        applications!applications_owner_id_fkey(id, status, business_name, created_at)
+      `)
+      .eq('role', 'owner')
+      .order('created_at', { ascending: false })
+    if (ownersError) {
+      console.error('loadOwners error:', ownersError)
+    }
+    setOwners(data ?? [])
+  }, [])
+
+  useEffect(() => { loadOwners() }, [loadOwners])
 
   // Helper for printing a clearance PDF
   const handlePrint = async (app) => {
@@ -334,35 +363,17 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
                   to="/admin"
                   className={`nav-link ${activeTab === 'applications' ? 'active' : ''}`}
                   onClick={() => {
+                    setSelectedOwnerFilter(null)
                     setActiveTab('applications')
                     setIsMobileSidebarOpen(false)
                   }}
-                  title={isSidebarMinimized ? 'All Applications' : undefined}
+                  title={isSidebarMinimized ? 'Applications' : undefined}
                 >
                   <FileText className="nav-icon" />
                   {!isSidebarMinimized && (
                     <>
-                      <span>All Applications</span>
+                      <span>Applications</span>
                       <span className="nav-badge">{counts.total}</span>
-                    </>
-                  )}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/admin"
-                  className={`nav-link ${activeTab === 'pending' ? 'active' : ''}`}
-                  onClick={() => {
-                    setActiveTab('pending')
-                    setIsMobileSidebarOpen(false)
-                  }}
-                  title={isSidebarMinimized ? 'Pending Review' : undefined}
-                >
-                  <Clock className="nav-icon" />
-                  {!isSidebarMinimized && (
-                    <>
-                      <span>Pending Review</span>
-                      <span className="nav-badge" style={{ backgroundColor: '#ED7A3A' }}>{counts.pending}</span>
                     </>
                   )}
                 </Link>
@@ -389,15 +400,20 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
               <li>
                 <Link
                   to="/admin"
-                  className={`nav-link ${activeTab === 'applicants' ? 'active' : ''}`}
+                  className={`nav-link ${activeTab === 'owners' ? 'active' : ''}`}
                   onClick={() => {
-                    setActiveTab('applicants')
+                    setActiveTab('owners')
                     setIsMobileSidebarOpen(false)
                   }}
-                  title={isSidebarMinimized ? 'Applicants' : undefined}
+                  title={isSidebarMinimized ? 'Owners' : undefined}
                 >
                   <Users className="nav-icon" />
-                  {!isSidebarMinimized && <span>Applicants</span>}
+                  {!isSidebarMinimized && (
+                    <>
+                      <span>Owners</span>
+                      <span className="nav-badge">{owners.length}</span>
+                    </>
+                  )}
                 </Link>
               </li>
               <li>
@@ -529,6 +545,32 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
         ) : activeTab === 'settings' ? (
           <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
             <SettingsView profile={profile} user={user} />
+          </div>
+
+        ) : activeTab === 'applications' ? (
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+            <HistoryView
+              applications={filteredApplicationsByOwner}
+              headerTitle="Applications"
+              headerSubtitle="Complete list of all Barangay Business Clearance applications."
+              showApplicant={true}
+              selectedOwnerFilter={selectedOwnerFilter}
+              onClearOwnerFilter={() => setSelectedOwnerFilter(null)}
+              onSelectApplication={(app) => {
+                navigate(`/admin/applications/${app.id}`)
+              }}
+            />
+          </div>
+
+        ) : activeTab === 'owners' ? (
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+            <OwnersView
+              owners={owners}
+              onViewApplications={(owner) => {
+                setSelectedOwnerFilter(owner)
+                setActiveTab('applications')
+              }}
+            />
           </div>
 
         ) : (
@@ -739,16 +781,6 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
                                       <Eye size={12} />
                                       <span>Review</span>
                                     </Link>
-                                    {['Approved', 'Proceed to Barangay Hall'].includes(item.status) && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handlePrint(item)}
-                                        className="figma-admin-icon-action-btn"
-                                        title="Print clearance"
-                                      >
-                                        <Printer size={12} />
-                                      </button>
-                                    )}
                                   </div>
                                 </td>
                               </tr>

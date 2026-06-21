@@ -31,7 +31,15 @@ function calculateProcessingTime(app) {
   return finalDays === 1 ? '1 day' : `${finalDays} days`
 }
 
-export default function HistoryView({ applications = [], onSelectApplication }) {
+export default function HistoryView({
+  applications = [],
+  onSelectApplication,
+  headerTitle = 'Application History',
+  headerSubtitle = 'Complete record of all your Barangay Business Clearance requests.',
+  showApplicant = false,
+  selectedOwnerFilter = null,
+  onClearOwnerFilter = null
+}) {
   const [filter, setFilter] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('newest')
@@ -162,20 +170,39 @@ export default function HistoryView({ applications = [], onSelectApplication }) 
           <nav className="breadcrumbs-nav" aria-label="Breadcrumb navigation">
             <span className="crumb-item">Dashboard</span>
             <span className="crumb-divider">/</span>
-            <span className="crumb-item active">Application History</span>
+            <span className="crumb-item active">{headerTitle}</span>
           </nav>
           
           <div className="serif-title-row">
-            <h2 className="title-text-normal">Application </h2>
-            <h2 className="title-text-italic">History</h2>
+            {headerTitle.split(' ').length > 1 ? (
+              <>
+                <h2 className="title-text-normal">{headerTitle.split(' ').slice(0, -1).join(' ')} </h2>
+                <h2 className="title-text-italic">{headerTitle.split(' ').slice(-1)[0]}</h2>
+              </>
+            ) : (
+              <h2 className="title-text-italic">{headerTitle}</h2>
+            )}
           </div>
           
           <p className="history-subtitle">
-            Complete record of all your Barangay Business Clearance requests.
+            {headerSubtitle}
           </p>
         </div>
 
       </header>
+
+      {selectedOwnerFilter && (
+        <div className="owner-filter-banner">
+          <span>Showing applications for <strong>{selectedOwnerFilter.full_name}</strong></span>
+          <button
+            type="button"
+            className="clear-filter-btn"
+            onClick={onClearOwnerFilter}
+          >
+            Clear Filter
+          </button>
+        </div>
+      )}
 
       {/* 2. Stats Bento Cards */}
       <section className="history-stats-grid" aria-label="Applications statistics">
@@ -266,15 +293,16 @@ export default function HistoryView({ applications = [], onSelectApplication }) 
 
       {/* 4. Data Table Card */}
       <section className="history-table-card">
-        <div className="table-responsive-container">
+        <div className={`table-responsive-container${showApplicant ? ' history-table-admin' : ''}`}>
           <table className="history-data-table">
             <thead>
               <tr>
                 <th scope="col">APPLICATION</th>
+                {showApplicant && <th scope="col">APPLICANT</th>}
                 <th scope="col">BUSINESS NAME</th>
-                <th scope="col">DATE SUBMITTED</th>
-                <th scope="col">DATE PROCESSED</th>
-                <th scope="col">PROCESSING TIME</th>
+                <th scope="col">SUBMITTED</th>
+                <th scope="col">PROCESSED</th>
+                <th scope="col">PROC. TIME</th>
                 <th scope="col">STATUS</th>
               </tr>
             </thead>
@@ -308,6 +336,16 @@ export default function HistoryView({ applications = [], onSelectApplication }) 
                           </div>
                         </div>
                       </td>
+
+                      {/* Optional: Applicant column for admin */}
+                      {showApplicant && (
+                        <td>
+                          <div className="business-column-wrap">
+                            <strong className="business-title">{app.owner_full_name || '—'}</strong>
+                            <span className="business-nature">{app.contact_number || ''}</span>
+                          </div>
+                        </td>
+                      )}
 
                       {/* Column 2: Business Name */}
                       <td>
