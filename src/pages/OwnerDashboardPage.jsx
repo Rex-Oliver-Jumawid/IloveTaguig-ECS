@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
+import { toOwnerVisibleApplications } from '../lib/ownerApplication'
 import ApplicationStatusView from '../components/ApplicationStatusView'
 import SettingsView from '../components/SettingsView'
 import HistoryView from '../components/HistoryView'
@@ -143,7 +144,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
       setApplications([])
       setLoadError('Applications could not be loaded. Check your connection and try again.')
     } else {
-      setApplications(data ?? [])
+      setApplications(toOwnerVisibleApplications(data ?? []))
     }
     setLoading(false)
   }, [user])

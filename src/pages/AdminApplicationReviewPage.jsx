@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
+import AdminHelpPanel from '../components/AdminHelpPanel'
 
 const CHECKLIST_ITEMS = [
   { key: 'address_verified', label: 'Address is within Barangay Napindan' },
@@ -56,6 +57,7 @@ export default function AdminApplicationReviewPage() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const adminInitials = profile?.initials ||
     (profile?.full_name || 'Admin Staff').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -162,12 +164,14 @@ export default function AdminApplicationReviewPage() {
           <button type="button" className="ar-icon-btn" aria-label="Notifications">
             <Bell size={16} />
           </button>
-          <button type="button" className="ar-icon-btn" aria-label="Help">
+          <button type="button" className="ar-icon-btn" aria-label="Help" onClick={() => setHelpOpen(true)}>
             <HelpCircle size={16} />
           </button>
           <div className="ar-avatar">{adminInitials}</div>
         </div>
       </header>
+
+      <AdminHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} context="review" />
 
       {/* Main body */}
       <div className="ar-body">

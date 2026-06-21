@@ -11,6 +11,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { toOwnerVisibleApplication } from '../lib/ownerApplication'
 
 function formatRelativeTime(dateString) {
   const diffMs = new Date() - new Date(dateString)
@@ -167,7 +168,7 @@ export default function NotificationsView({
             .single()
           
           if (data && !appError) {
-            onSelectApplication(data)
+            onSelectApplication(toOwnerVisibleApplication(data))
           }
         } catch (err) {
           console.error('Failed to resolve application redirect:', err)

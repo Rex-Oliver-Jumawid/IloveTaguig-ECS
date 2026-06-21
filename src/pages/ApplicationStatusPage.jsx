@@ -3,6 +3,7 @@ import { Link, useLocation, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import ApplicationStatusView from '../components/ApplicationStatusView'
+import { toOwnerVisibleApplication, toOwnerVisibleApplications } from '../lib/ownerApplication'
 
 export default function ApplicationStatusPage() {
   const { applicationId } = useParams()
@@ -33,9 +34,9 @@ export default function ApplicationStatusPage() {
     if (applicationResult.error) {
       setError('This application could not be found or you do not have access to it.')
     } else {
-      setApplication(applicationResult.data)
+      setApplication(toOwnerVisibleApplication(applicationResult.data))
       setDocuments(documentsResult.data ?? [])
-      setAllApplications(allAppsResult.data ?? [])
+      setAllApplications(toOwnerVisibleApplications(allAppsResult.data ?? []))
     }
   }, [applicationId])
 

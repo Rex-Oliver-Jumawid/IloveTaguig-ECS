@@ -27,6 +27,7 @@ import SettingsView from '../components/SettingsView'
 import HistoryView from '../components/HistoryView'
 import OwnersView from '../components/OwnersView'
 import PrintQueueView from '../components/PrintQueueView'
+import AdminHelpPanel from '../components/AdminHelpPanel'
 
 function getInitials(name) {
   if (!name) return '??'
@@ -51,6 +52,7 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   const [owners, setOwners] = useState([])
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState(null)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const filteredApplicationsByOwner = useMemo(() => {
     if (!selectedOwnerFilter) return applications
@@ -479,12 +481,14 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
               <Bell />
               {unreadNotificationsCount > 0 && <span className="notification-badge"></span>}
             </button>
-            <button type="button" className="icon-btn-round" aria-label="Help">
+            <button type="button" className="icon-btn-round" aria-label="Help" onClick={() => setHelpOpen(true)}>
               <HelpCircle />
             </button>
             <div className="user-avatar-badge">{adminInitials}</div>
           </div>
         </header>
+
+        <AdminHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} context="dashboard" />
 
         {/* ── TAB CONTENT ── */}
 

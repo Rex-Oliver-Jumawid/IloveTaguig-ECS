@@ -12,6 +12,7 @@ import {
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
+import AdminHelpPanel from '../components/AdminHelpPanel'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -28,6 +29,20 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+function safeFilenamePart(value) {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+}
+
+function clearanceFilename(clearance) {
+  const businessName = safeFilenamePart(clearance?.business_name) || 'Business'
+  const reference = safeFilenamePart(clearance?.reference_no) || 'Clearance'
+  return `Barangay-Business-Clearance-${reference}-${businessName}.pdf`
+}
+
 export default function AdminGeneratedClearancePage() {
   const { applicationId } = useParams()
   const navigate = useNavigate()
@@ -40,6 +55,7 @@ export default function AdminGeneratedClearancePage() {
   const [downloading, setDownloading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const adminInitials = profile?.initials ||
     (profile?.full_name || 'Admin').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -58,7 +74,9 @@ export default function AdminGeneratedClearancePage() {
     }
     const { data: urlData, error: urlError } = await supabase.storage
       .from('generated-clearances')
-      .createSignedUrl(data.generated_clearance_path, 300)
+      .createSignedUrl(data.generated_clearance_path, 300, {
+        download: clearanceFilename(data),
+      })
     if (urlError) {
       setError('The private PDF link could not be created.')
       setLoading(false)
@@ -77,7 +95,9 @@ export default function AdminGeneratedClearancePage() {
     setRefreshing(true)
     const { data, error: urlError } = await supabase.storage
       .from('generated-clearances')
-      .createSignedUrl(clearance.generated_clearance_path, 300)
+      .createSignedUrl(clearance.generated_clearance_path, 300, {
+        download: clearanceFilename(clearance),
+      })
     if (!urlError && data?.signedUrl) {
       setSignedUrl(data.signedUrl)
     } else {
@@ -101,18 +121,24 @@ export default function AdminGeneratedClearancePage() {
     navigate('/admin')
   }
 
-  // ── Download PDF (blob fetch → forces save dialog) ──────────
+  // ── Download PDF directly from private Storage with a stable filename ──
   async function downloadPdf() {
-    if (!signedUrl) return
+    if (!clearance?.generated_clearance_path) return
     setDownloading(true)
+    setError('')
     try {
-      const res = await fetch(signedUrl)
-      if (!res.ok) throw new Error('Failed to fetch PDF')
-      const blob = await res.blob()
-      const blobUrl = URL.createObjectURL(blob)
+      const { data, error: downloadError } = await supabase.storage
+        .from('generated-clearances')
+        .download(clearance.generated_clearance_path)
+      if (downloadError || !data) throw downloadError || new Error('PDF download returned no data')
+
+      const pdfBlob = new Blob([await data.arrayBuffer()], { type: 'application/pdf' })
+      const blobUrl = URL.createObjectURL(pdfBlob)
+      const filename = clearanceFilename(clearance)
       const anchor = document.createElement('a')
       anchor.href = blobUrl
-      anchor.download = `${clearance.reference_no}.pdf`
+      anchor.download = filename
+      anchor.type = 'application/pdf'
       document.body.appendChild(anchor)
       anchor.click()
       document.body.removeChild(anchor)
@@ -164,7 +190,7 @@ export default function AdminGeneratedClearancePage() {
             <ShieldCheck size={14} />
             ADMIN ONLY
           </span>
-          <button type="button" className="gc-icon-btn" aria-label="Help">
+          <button type="button" className="gc-icon-btn" aria-label="Help" onClick={() => setHelpOpen(true)}>
             <HelpCircle size={16} />
           </button>
           <div className="gc-avatar" aria-label={`Admin: ${profile?.full_name || 'Admin'}`}>
@@ -172,6 +198,8 @@ export default function AdminGeneratedClearancePage() {
           </div>
         </div>
       </header>
+
+      <AdminHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} context="clearance" />
 
       {/* ── Page body ──────────────────────────────────────────── */}
       <div className="gc-body">
