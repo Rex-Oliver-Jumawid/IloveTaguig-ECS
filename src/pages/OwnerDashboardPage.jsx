@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
+import ApplicationStatusView from '../components/ApplicationStatusView'
 
 export default function OwnerDashboardPage() {
   const { profile, user, signOut } = useAuth()
@@ -39,7 +40,36 @@ export default function OwnerDashboardPage() {
   const [infoModalOpen, setInfoModalOpen] = useState(false)
   const [infoModalMsg, setInfoModalMsg] = useState('')
 
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [recentAppDocs, setRecentAppDocs] = useState([])
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [docsError, setDocsError] = useState('')
+  const [viewingApp, setViewingApp] = useState(null)
+
+  const currentActiveApp = viewingApp || applications[0]
+
+  useEffect(() => {
+    const loadAppDocs = async () => {
+      if (!currentActiveApp) return
+      setDocsLoading(true)
+      setDocsError('')
+      const { data, error } = await supabase
+        .from('application_documents')
+        .select('id, storage_path, file_name, mime_type, file_size')
+        .eq('application_id', currentActiveApp.id)
+        .order('created_at')
+      if (error) {
+        setDocsError('Supporting documents could not be loaded.')
+      } else {
+        setRecentAppDocs(data ?? [])
+      }
+      setDocsLoading(false)
+    }
+    loadAppDocs()
+  }, [currentActiveApp])
+
   // Current Date formatting
+
   const currentDateFormatted = useMemo(() => {
     return new Date().toLocaleDateString('en-US', {
       weekday: 'long',
@@ -55,7 +85,7 @@ export default function OwnerDashboardPage() {
     setLoadError('')
     const { data, error } = await supabase
       .from('applications')
-      .select('id, reference_no, business_name, nature_of_business, ownership_type, application_type, contact_number, business_address, status, remarks, created_at')
+      .select('id, reference_no, business_name, nature_of_business, ownership_type, application_type, contact_number, business_address, status, remarks, created_at, updated_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -235,13 +265,32 @@ export default function OwnerDashboardPage() {
           <nav className="sidebar-nav" aria-label="Sidebar navigation">
             <ul className="nav-list">
               <li>
-                <a href="#dashboard" className="nav-link active" title={isSidebarMinimized ? "Dashboard" : undefined}>
+                <a
+                  href="#dashboard"
+                  className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setActiveTab('dashboard')
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? "Dashboard" : undefined}
+                >
                   <Home className="nav-icon" />
                   {!isSidebarMinimized && <span>Dashboard</span>}
                 </a>
               </li>
               <li>
-                <a href="#applications" className="nav-link" onClick={triggerTrack} title={isSidebarMinimized ? "Applications" : undefined}>
+                <a
+                  href="#applications"
+                  className={`nav-link ${activeTab === 'applications' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setActiveTab('applications')
+                    setViewingApp(null) // reset to most recent
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  title={isSidebarMinimized ? "Applications" : undefined}
+                >
                   <FileText className="nav-icon" />
                   {!isSidebarMinimized && (
                     <>
@@ -341,277 +390,310 @@ export default function OwnerDashboardPage() {
           </div>
         </header>
 
-        {/* Welcome Section */}
-        <section className="welcome-section">
-          <div className="welcome-text">
-            <h2>Welcome back, <span className="welcome-highlight">{ownerName}!</span></h2>
-            <p>Here is the status of your business certifications and clearance applications.</p>
-          </div>
-          <div className="welcome-meta">
-            <span className="meta-date">{currentDateFormatted}</span>
-            <span className="meta-location">Barangay Napindan, Taguig City</span>
-          </div>
-        </section>
-
-        {/* Overview Stat Cards */}
-        <section className="overview-grid" aria-label="Status overview cards">
-          <div className="overview-card active-card">
-            <div className="card-top">
-              <div className="card-icon-wrapper">
-                <FileText />
+        {activeTab === 'dashboard' ? (
+          <>
+            {/* Welcome Section */}
+            <section className="welcome-section">
+              <div className="welcome-text">
+                <h2>Welcome back, <span className="welcome-highlight">{ownerName}!</span></h2>
+                <p>Here is the status of your business certifications and clearance applications.</p>
               </div>
-              <span className="status-pill-subtle active-status">Active</span>
-            </div>
-            <div className="card-body">
-              <h3>{stats.active}</h3>
-              <p>Active Applications</p>
-            </div>
-          </div>
-
-          <div className="overview-card approved-card">
-            <div className="card-top">
-              <div className="card-icon-wrapper">
-                <Award />
+              <div className="welcome-meta">
+                <span className="meta-date">{currentDateFormatted}</span>
+                <span className="meta-location">Barangay Napindan, Taguig City</span>
               </div>
-              <span className="status-pill-subtle approved-status">All time</span>
-            </div>
-            <div className="card-body">
-              <h3>{stats.approved}</h3>
-              <p>Total Approved</p>
-            </div>
-          </div>
+            </section>
 
-          <div className="overview-card alert-card">
-            <div className="card-top">
-              <div className="card-icon-wrapper">
-                <AlertTriangle />
-              </div>
-              <span className="status-pill-subtle alert-status">Needs action</span>
-            </div>
-            <div className="card-body">
-              <h3>{stats.actionRequired}</h3>
-              <p>Action Required</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Main Grid: Table & Widgets */}
-        <div className="main-layout-grid">
-          
-          {/* Applications Table */}
-          <section className="grid-table-container">
-            <div className="content-card">
-              <header className="card-header">
-                <div className="card-header-title">
-                  <span className="title-indicator"></span>
-                  <h3>RECENT APPLICATIONS</h3>
+            {/* Overview Stat Cards */}
+            <section className="overview-grid" aria-label="Status overview cards">
+              <div className="overview-card active-card">
+                <div className="card-top">
+                  <div className="card-icon-wrapper">
+                    <FileText />
+                  </div>
+                  <span className="status-pill-subtle active-status">Active</span>
                 </div>
-              </header>
+                <div className="card-body">
+                  <h3>{stats.active}</h3>
+                  <p>Active Applications</p>
+                </div>
+              </div>
 
-              <div className="table-responsive-wrapper">
-                {loadError && <div className="owner-inline-error dashboard-load-error" role="alert"><AlertTriangle size={18} /><span>{loadError}</span><button type="button" onClick={loadApplications}>Try again</button></div>}
-                <table className="applications-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">APPLICATION ID</th>
-                      <th scope="col">BUSINESS NAME</th>
-                      <th scope="col">TYPE</th>
-                      <th scope="col">STATUS</th>
-                      <th scope="col" className="th-actions">ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredApps.map(app => {
-                      let statusClass = 'status-orange'
-                      if (app.status === 'Action Required' || app.status === 'Rejected') {
-                        statusClass = 'status-red'
-                      } else if (app.status === 'Proceed to Barangay Hall') {
-                        statusClass = 'status-blue'
-                      } else if (app.status === 'Approved' || app.status === 'Complete') {
-                        statusClass = 'status-teal'
-                      }
+              <div className="overview-card approved-card">
+                <div className="card-top">
+                  <div className="card-icon-wrapper">
+                    <Award />
+                  </div>
+                  <span className="status-pill-subtle approved-status">All time</span>
+                </div>
+                <div className="card-body">
+                  <h3>{stats.approved}</h3>
+                  <p>Total Approved</p>
+                </div>
+              </div>
 
-                      const statusText = app.status === 'Proceed to Barangay Hall' ? 'Ready for Claiming' : app.status
+              <div className="overview-card alert-card">
+                <div className="card-top">
+                  <div className="card-icon-wrapper">
+                    <AlertTriangle />
+                  </div>
+                  <span className="status-pill-subtle alert-status">Needs action</span>
+                </div>
+                <div className="card-body">
+                  <h3>{stats.actionRequired}</h3>
+                  <p>Action Required</p>
+                </div>
+              </div>
+            </section>
 
-                      return (
-                        <tr key={app.id} className="table-row">
-                          <td>
-                            <button 
-                              type="button" 
-                              className="app-id-badge" 
-                              onClick={() => handleViewApp(app)}
-                              title="Click to view details"
-                            >
-                              {app.reference_no ?? `APP-${app.id.slice(0, 8).toUpperCase()}`}
-                            </button>
-                          </td>
-                          <td>
-                            <span className="app-type">{app.business_name}</span>
-                          </td>
-                          <td>
-                            <span className="app-date">{app.application_type} ({app.nature_of_business})</span>
-                          </td>
-                          <td>
-                            <span className={`status-pill ${statusClass}`}>
-                              <span className="status-dot"></span>
-                              <span>{statusText}</span>
-                            </span>
-                          </td>
-                          <td className="td-actions">
-                            <button 
-                              type="button" 
-                              className="action-view-btn" 
-                              onClick={() => handleViewApp(app)}
-                              aria-label={`View application details`}
-                            >
-                              <Eye />
-                              <span>View</span>
-                            </button>
-                          </td>
+            {/* Main Grid: Table & Widgets */}
+            <div className="main-layout-grid">
+              
+              {/* Applications Table */}
+              <section className="grid-table-container">
+                <div className="content-card">
+                  <header className="card-header">
+                    <div className="card-header-title">
+                      <span className="title-indicator"></span>
+                      <h3>RECENT APPLICATIONS</h3>
+                    </div>
+                  </header>
+
+                  <div className="table-responsive-wrapper">
+                    {loadError && <div className="owner-inline-error dashboard-load-error" role="alert"><AlertTriangle size={18} /><span>{loadError}</span><button type="button" onClick={loadApplications}>Try again</button></div>}
+                    <table className="applications-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">APPLICATION ID</th>
+                          <th scope="col">BUSINESS NAME</th>
+                          <th scope="col">TYPE</th>
+                          <th scope="col">STATUS</th>
+                          <th scope="col" className="th-actions">ACTIONS</th>
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                
-                {filteredApps.length === 0 && (
-                  <div className="no-results">No matching clearance applications found.</div>
-                )}
-              </div>
-            </div>
-          </section>
+                      </thead>
+                      <tbody>
+                        {filteredApps.map(app => {
+                          let statusClass = 'status-orange'
+                          if (app.status === 'Action Required' || app.status === 'Rejected') {
+                            statusClass = 'status-red'
+                          } else if (app.status === 'Proceed to Barangay Hall') {
+                            statusClass = 'status-blue'
+                          } else if (app.status === 'Approved' || app.status === 'Complete') {
+                            statusClass = 'status-teal'
+                          }
 
-          {/* Widget Panel */}
-          <section className="grid-widgets-container">
-            
-            {/* Alert Banner Widget */}
-            {actionRequiredApp && !isAlertDismissed && (
-              <div className="alert-widget">
-                <div className="widget-decor-bg"></div>
-                <div className="alert-header">
-                  <h4 className="alert-title">Action Required on {actionRequiredApp.reference_no}</h4>
-                  <button 
-                    className="alert-dismiss-btn" 
-                    onClick={() => setIsAlertDismissed(true)} 
-                    aria-label="Dismiss Alert"
-                  >
-                    <X size={16} />
-                  </button>
+                          const statusText = app.status === 'Proceed to Barangay Hall' ? 'Ready for Claiming' : app.status
+
+                          return (
+                            <tr key={app.id} className="table-row">
+                              <td>
+                                <button 
+                                  type="button" 
+                                  className="app-id-badge" 
+                                  onClick={() => handleViewApp(app)}
+                                  title="Click to view details"
+                                >
+                                  {app.reference_no ?? `APP-${app.id.slice(0, 8).toUpperCase()}`}
+                                </button>
+                              </td>
+                              <td>
+                                <span className="app-type">{app.business_name}</span>
+                              </td>
+                              <td>
+                                <span className="app-date">{app.application_type} ({app.nature_of_business})</span>
+                              </td>
+                              <td>
+                                <span className={`status-pill ${statusClass}`}>
+                                  <span className="status-dot"></span>
+                                  <span>{statusText}</span>
+                                </span>
+                              </td>
+                              <td className="td-actions">
+                                <button 
+                                  type="button" 
+                                  className="action-view-btn" 
+                                  onClick={() => handleViewApp(app)}
+                                  aria-label={`View application details`}
+                                >
+                                  <Eye />
+                                  <span>View</span>
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                    
+                    {filteredApps.length === 0 && (
+                      <div className="no-results">No matching clearance applications found.</div>
+                    )}
+                  </div>
                 </div>
-                <p className="alert-desc">{actionRequiredApp.remarks}</p>
-                <button className="alert-cta-btn" onClick={() => handleViewApp(actionRequiredApp)}>
-                  <RefreshCw className="btn-icon" size={14} />
-                  <span>Update Application</span>
-                </button>
+              </section>
+
+              {/* Widget Panel */}
+              <section className="grid-widgets-container">
+                
+                {/* Alert Banner Widget */}
+                {actionRequiredApp && !isAlertDismissed && (
+                  <div className="alert-widget">
+                    <div className="widget-decor-bg"></div>
+                    <div className="alert-header">
+                      <h4 className="alert-title">Action Required on {actionRequiredApp.reference_no}</h4>
+                      <button 
+                        className="alert-dismiss-btn" 
+                        onClick={() => setIsAlertDismissed(true)} 
+                        aria-label="Dismiss Alert"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <p className="alert-desc">{actionRequiredApp.remarks}</p>
+                    <button className="alert-cta-btn" onClick={() => handleViewApp(actionRequiredApp)}>
+                      <RefreshCw className="btn-icon" size={14} />
+                      <span>Update Application</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Quick Actions */}
+                <div className="content-card widget-card">
+                  <header className="card-header border-bottom">
+                    <div className="card-header-title">
+                      <span className="title-indicator"></span>
+                      <h4>QUICK ACTIONS</h4>
+                    </div>
+                  </header>
+                  <div className="widget-content quick-actions-list">
+                    <Link to="/owner/applications/new" className="quick-action-item active-action">
+                      <div className="action-icon-wrapper">
+                        <Plus />
+                      </div>
+                      <div className="action-text">
+                        <h5>New Application</h5>
+                        <p>Submit a clearance request</p>
+                      </div>
+                    </Link>
+
+                    <button type="button" className="quick-action-item" onClick={() => {
+                      setActiveTab('applications')
+                      setViewingApp(null) // default to most recent
+                    }}>
+                      <div className="action-icon-wrapper">
+                        <Search />
+                      </div>
+                      <div className="action-text">
+                        <h5>Track Status</h5>
+                        <p>Check clearance progress</p>
+                      </div>
+                    </button>
+
+                    <button type="button" className="quick-action-item" onClick={triggerHistory}>
+                      <div className="action-icon-wrapper">
+                        <History />
+                      </div>
+                      <div className="action-text">
+                        <h5>View History</h5>
+                        <p>All past clearance records</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status Summary Progress Bars */}
+                <div className="content-card widget-card">
+                  <header className="card-header border-bottom">
+                    <div className="card-header-title">
+                      <span className="title-indicator"></span>
+                      <h4>STATUS SUMMARY</h4>
+                    </div>
+                  </header>
+                  <div className="widget-content status-summary-list">
+                    <div className="progress-item">
+                      <div className="progress-header">
+                        <div className="progress-title-row">
+                          <span className="progress-dot dot-orange"></span>
+                          <span className="progress-label">Pending Review</span>
+                        </div>
+                        <span className="progress-count">{statusSummary.pending.count}</span>
+                      </div>
+                      <div className="progress-bar-bg">
+                        <div className="progress-bar-fill fill-orange" style={{ width: `${statusSummary.pending.percent}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="progress-item">
+                      <div className="progress-header">
+                        <div className="progress-title-row">
+                          <span className="progress-dot dot-red"></span>
+                          <span className="progress-label">Action Required</span>
+                        </div>
+                        <span className="progress-count">{statusSummary.action.count}</span>
+                      </div>
+                      <div className="progress-bar-bg">
+                        <div className="progress-bar-fill fill-red" style={{ width: `${statusSummary.action.percent}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="progress-item">
+                      <div className="progress-header">
+                        <div className="progress-title-row">
+                          <span className="progress-dot dot-blue"></span>
+                          <span className="progress-label">Ready for Claiming</span>
+                        </div>
+                        <span className="progress-count">{statusSummary.ready.count}</span>
+                      </div>
+                      <div className="progress-bar-bg">
+                        <div className="progress-bar-fill fill-blue" style={{ width: `${statusSummary.ready.percent}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="progress-item">
+                      <div className="progress-header">
+                        <div className="progress-title-row">
+                          <span className="progress-dot dot-teal"></span>
+                          <span className="progress-label">Approved</span>
+                        </div>
+                        <span className="progress-count">{statusSummary.approved.count}</span>
+                      </div>
+                      <div className="progress-bar-bg">
+                        <div className="progress-bar-fill fill-teal" style={{ width: `${statusSummary.approved.percent}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </section>
+            </div>
+          </>
+        ) : (
+          <div className="owner-applications-tab-view" style={{ padding: 'clamp(20px, 4vw, 32px)' }}>
+            {currentActiveApp ? (
+              <ApplicationStatusView
+                application={currentActiveApp}
+                documents={recentAppDocs}
+                onRefresh={loadApplications}
+                user={user}
+                onBack={() => setActiveTab('dashboard')}
+                allApplications={applications}
+                onSelectApplication={(app) => setViewingApp(app)}
+              />
+            ) : (
+              <div className="owner-empty-state">
+                <div>
+                  <FileText size={24} />
+                </div>
+                <h3>No clearance applications found</h3>
+                <p>Submit a new application to get started with your Barangay Business Clearance.</p>
+                <Link to="/owner/applications/new" className="owner-primary-action" style={{ marginTop: '16px' }}>
+                  <span>NEW APPLICATION</span>
+                  <Plus className="btn-icon" size={16} />
+                </Link>
               </div>
             )}
-
-            {/* Quick Actions */}
-            <div className="content-card widget-card">
-              <header className="card-header border-bottom">
-                <div className="card-header-title">
-                  <span className="title-indicator"></span>
-                  <h4>QUICK ACTIONS</h4>
-                </div>
-              </header>
-              <div className="widget-content quick-actions-list">
-                <Link to="/owner/applications/new" className="quick-action-item active-action">
-                  <div className="action-icon-wrapper">
-                    <Plus />
-                  </div>
-                  <div className="action-text">
-                    <h5>New Application</h5>
-                    <p>Submit a clearance request</p>
-                  </div>
-                </Link>
-
-                <button type="button" className="quick-action-item" onClick={triggerTrack}>
-                  <div className="action-icon-wrapper">
-                    <Search />
-                  </div>
-                  <div className="action-text">
-                    <h5>Track Status</h5>
-                    <p>Check clearance progress</p>
-                  </div>
-                </button>
-
-                <button type="button" className="quick-action-item" onClick={triggerHistory}>
-                  <div className="action-icon-wrapper">
-                    <History />
-                  </div>
-                  <div className="action-text">
-                    <h5>View History</h5>
-                    <p>All past clearance records</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Status Summary Progress Bars */}
-            <div className="content-card widget-card">
-              <header className="card-header border-bottom">
-                <div className="card-header-title">
-                  <span className="title-indicator"></span>
-                  <h4>STATUS SUMMARY</h4>
-                </div>
-              </header>
-              <div className="widget-content status-summary-list">
-                <div className="progress-item">
-                  <div className="progress-header">
-                    <div className="progress-title-row">
-                      <span className="progress-dot dot-orange"></span>
-                      <span className="progress-label">Pending Review</span>
-                    </div>
-                    <span className="progress-count">{statusSummary.pending.count}</span>
-                  </div>
-                  <div className="progress-bar-bg">
-                    <div className="progress-bar-fill fill-orange" style={{ width: `${statusSummary.pending.percent}%` }}></div>
-                  </div>
-                </div>
-
-                <div className="progress-item">
-                  <div className="progress-header">
-                    <div className="progress-title-row">
-                      <span className="progress-dot dot-red"></span>
-                      <span className="progress-label">Action Required</span>
-                    </div>
-                    <span className="progress-count">{statusSummary.action.count}</span>
-                  </div>
-                  <div className="progress-bar-bg">
-                    <div className="progress-bar-fill fill-red" style={{ width: `${statusSummary.action.percent}%` }}></div>
-                  </div>
-                </div>
-
-                <div className="progress-item">
-                  <div className="progress-header">
-                    <div className="progress-title-row">
-                      <span className="progress-dot dot-blue"></span>
-                      <span className="progress-label">Ready for Claiming</span>
-                    </div>
-                    <span className="progress-count">{statusSummary.ready.count}</span>
-                  </div>
-                  <div className="progress-bar-bg">
-                    <div className="progress-bar-fill fill-blue" style={{ width: `${statusSummary.ready.percent}%` }}></div>
-                  </div>
-                </div>
-
-                <div className="progress-item">
-                  <div className="progress-header">
-                    <div className="progress-title-row">
-                      <span className="progress-dot dot-teal"></span>
-                      <span className="progress-label">Approved</span>
-                    </div>
-                    <span className="progress-count">{statusSummary.approved.count}</span>
-                  </div>
-                  <div className="progress-bar-bg">
-                    <div className="progress-bar-fill fill-teal" style={{ width: `${statusSummary.approved.percent}%` }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </section>
-        </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="dashboard-footer">
