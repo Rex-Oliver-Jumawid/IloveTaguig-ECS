@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Eye, EyeOff, LoaderCircle } from 'lucide-react'
 import AuthShell from '../components/AuthShell'
 import FormMessage from '../components/FormMessage'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -28,6 +27,7 @@ export default function AuthPage() {
 
   function switchMode(nextMode) {
     setParams(nextMode === 'register' ? { mode: 'register' } : {})
+    setFields(initialFields)
     setErrors({})
     setMessage('')
     setSuccess('')
@@ -41,12 +41,12 @@ export default function AuthPage() {
 
   function validate() {
     const next = {}
-    if (mode === 'register' && !fields.fullName.trim()) next.fullName = 'Enter your full legal name.'
-    if (!fields.email.trim()) next.email = 'Enter your email address.'
-    if (!fields.password) next.password = 'Enter your password.'
-    else if (mode === 'register' && fields.password.length < 8) next.password = 'Use at least 8 characters.'
-    if (mode === 'register' && fields.confirmPassword !== fields.password) next.confirmPassword = 'Passwords must match.'
-    if (mode === 'register' && !fields.terms) next.terms = 'Accept the terms and privacy policy to register.'
+    if (mode === 'register' && !fields.fullName.trim()) next.fullName = 'Please enter your full name.'
+    if (!fields.email.trim()) next.email = 'Please enter a valid email address.'
+    if (!fields.password) next.password = 'Please enter your password.'
+    else if (mode === 'register' && fields.password.length < 8) next.password = 'Password must be at least 8 characters long.'
+    if (mode === 'register' && fields.confirmPassword !== fields.password) next.confirmPassword = 'Passwords do not match.'
+    if (mode === 'register' && !fields.terms) next.terms = 'You must agree to the terms to continue.'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -102,37 +102,242 @@ export default function AuthPage() {
 
   const register = mode === 'register'
   return (
-    <AuthShell title="Business Clearance, Without the Repeated Visits" description="Apply securely, track progress, and know exactly when to proceed to Barangay Hall.">
-      <div className="mode-tabs" role="tablist" aria-label="Authentication mode">
-        <button type="button" role="tab" aria-selected={!register} onClick={() => switchMode('login')}>Sign In</button>
-        <button type="button" role="tab" aria-selected={register} onClick={() => switchMode('register')}>Create Account</button>
-      </div>
-      <div className="form-heading"><h2>{register ? 'Create Your Account' : 'Welcome Back'}</h2><p>{register ? 'Register as a business owner.' : 'Sign in to continue your application.'}</p></div>
+    <AuthShell>
+      {/* Tab Bar */}
+      <nav class="form-tabs" aria-label="Form switching tabs">
+        <button
+          type="button"
+          class={`tab-btn ${!register ? 'active' : ''}`}
+          id="login-tab"
+          aria-selected={!register}
+          onClick={() => switchMode('login')}
+        >
+          Log In
+        </button>
+        <button
+          type="button"
+          class={`tab-btn ${register ? 'active' : ''}`}
+          id="register-tab"
+          aria-selected={register}
+          onClick={() => switchMode('register')}
+        >
+          Register
+        </button>
+      </nav>
+
+      {/* Form Headers */}
+      <header class="form-header">
+        <h2 id="form-heading" class="form-heading">
+          {register ? (
+            <>Create <span class="highlight-orange">account.</span></>
+          ) : (
+            <>Welcome <span class="highlight-orange">back.</span></>
+          )}
+        </h2>
+        <p id="form-subheading" class="form-subheading">
+          {register ? 'Register to start your business clearance application.' : 'Sign in to access your dashboard.'}
+        </p>
+      </header>
+
       {!isSupabaseConfigured && <FormMessage>Supabase is not configured in this environment.</FormMessage>}
       <FormMessage>{message}</FormMessage>
       <FormMessage type="success">{success}</FormMessage>
-      <form onSubmit={handleSubmit} noValidate>
-        {register && <Field label="Full Name" name="fullName" value={fields.fullName} onChange={updateField} error={errors.fullName} autoComplete="name" placeholder="Juan Dela Cruz…" inputRef={errors.fullName ? firstErrorRef : null} />}
-        <Field label="Email Address" name="email" type="email" value={fields.email} onChange={updateField} error={errors.email} autoComplete="email" placeholder="name@example.com…" inputRef={!errors.fullName && errors.email ? firstErrorRef : null} />
-        <div className="field-group">
-          <label htmlFor="password">Password</label>
-          <div className="password-control">
-            <input ref={!errors.fullName && !errors.email && errors.password ? firstErrorRef : null} id="password" name="password" type={showPassword ? 'text' : 'password'} value={fields.password} onChange={updateField} autoComplete={register ? 'new-password' : 'current-password'} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? 'password-error' : undefined} />
-            <button type="button" className="icon-button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button>
+
+      <form onSubmit={handleSubmit} noValidate id="auth-form">
+        {register && (
+          <Field
+            label="Full Name"
+            name="fullName"
+            value={fields.fullName}
+            onChange={updateField}
+            error={errors.fullName}
+            autoComplete="name"
+            placeholder="Juan Dela Cruz"
+            inputRef={errors.fullName ? firstErrorRef : null}
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+            }
+          />
+        )}
+
+        <Field
+          label="Email Address"
+          name="email"
+          type="email"
+          value={fields.email}
+          onChange={updateField}
+          error={errors.email}
+          autoComplete="email"
+          placeholder="juan.delacruz@example.com"
+          inputRef={!errors.fullName && errors.email ? firstErrorRef : null}
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+          }
+        />
+
+        {/* Password input group */}
+        <div class={`input-group ${errors.password ? 'has-error' : ''}`}>
+          <label htmlFor="password" class="input-label">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon-slot">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </span>
+            <input
+              ref={!errors.fullName && !errors.email && errors.password ? firstErrorRef : null}
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={fields.password}
+              onChange={updateField}
+              autoComplete={register ? 'new-password' : 'current-password'}
+              placeholder={register ? 'Create a password' : 'Enter your password'}
+              class="form-input"
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={errors.password ? 'password-error' : undefined}
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              onClick={() => setShowPassword((value) => !value)}
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12c1.391 4.178 5.328 7.178 9.963 7.178 1.488 0 2.9-.304 4.18-.849m4.847-3.655a10.463 10.463 0 002.146-2.674c-1.391-4.178-5.328-7.178-9.963-7.178-.507 0-.996.04-1.472.117M3.75 3.75l16.5 16.5M12 9a3 3 0 00-3 3" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              )}
+            </button>
           </div>
-          {errors.password && <p className="field-error" id="password-error">{errors.password}</p>}
+          {errors.password && <span class="error-msg" id="password-error" style={{ display: 'block' }}>{errors.password}</span>}
         </div>
-        {register && <Field label="Confirm Password" name="confirmPassword" type="password" value={fields.confirmPassword} onChange={updateField} error={errors.confirmPassword} autoComplete="new-password" inputRef={!errors.fullName && !errors.email && !errors.password && errors.confirmPassword ? firstErrorRef : null} />}
-        {register ? <div className="field-group"><label className="checkbox-row"><input ref={errors.terms ? firstErrorRef : null} type="checkbox" name="terms" checked={fields.terms} onChange={updateField} aria-invalid={Boolean(errors.terms)} /><span>I agree to the Terms of Service and Privacy Policy.</span></label>{errors.terms && <p className="field-error">{errors.terms}</p>}</div> : <div className="form-options"><label className="checkbox-row"><input type="checkbox" name="remember" /><span>Remember me</span></label><Link to="/forgot-password">Forgot Password?</Link></div>}
-        <button className="primary-button" type="submit" disabled={pending}>{pending ? <><LoaderCircle className="spinner" size={18} aria-hidden="true" /> Please Wait…</> : register ? 'Create Account' : 'Sign In'}</button>
+
+        {register && (
+          <Field
+            label="Confirm Password"
+            name="confirmPassword"
+            type="password"
+            value={fields.confirmPassword}
+            onChange={updateField}
+            error={errors.confirmPassword}
+            autoComplete="new-password"
+            placeholder="Repeat your password"
+            inputRef={!errors.fullName && !errors.email && !errors.password && errors.confirmPassword ? firstErrorRef : null}
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            }
+          />
+        )}
+
+        {/* Form Options Checkbox & Links Row */}
+        <div class="form-options-row">
+          {register ? (
+            <label class="checkbox-label" id="terms-container">
+              <input
+                ref={errors.terms ? firstErrorRef : null}
+                type="checkbox"
+                name="terms"
+                checked={fields.terms}
+                onChange={updateField}
+                aria-invalid={Boolean(errors.terms)}
+              />
+              <span class="custom-checkbox"></span>
+              <span class="label-text">
+                I agree to the <a href="#" class="teal-link">Terms of Service</a> & <a href="#" class="teal-link">Privacy Policy</a>
+              </span>
+            </label>
+          ) : (
+            <>
+              <label class="checkbox-label">
+                <input type="checkbox" name="remember" />
+                <span class="custom-checkbox"></span>
+                <span class="label-text">Remember me</span>
+              </label>
+              <Link to="/forgot-password" class="orange-link">Forgot password?</Link>
+            </>
+          )}
+        </div>
+        {register && errors.terms && (
+          <span class="error-msg" style={{ display: 'block' }}>{errors.terms}</span>
+        )}
+
+        {/* Submit button */}
+        <button class="submit-btn" type="submit" disabled={pending}>
+          {pending ? (
+            <>
+              <span className="spinner"></span> Please Wait…
+            </>
+          ) : register ? (
+            'CREATE ACCOUNT'
+          ) : (
+            'LOG IN'
+          )}
+        </button>
       </form>
-      {message.toLowerCase().includes('confirm') && <button className="secondary-button" type="button" disabled={pending} onClick={resendConfirmation}>Resend Confirmation Email</button>}
-      <div className="divider"><span>or</span></div>
-      <button className="google-button" type="button" disabled={pending} onClick={continueWithGoogle}><span aria-hidden="true">G</span> Continue with Google</button>
+
+      {message.toLowerCase().includes('confirm') && (
+        <button class="secondary-button" type="button" disabled={pending} onClick={resendConfirmation}>
+          Resend Confirmation Email
+        </button>
+      )}
+
+      {/* Alternative Social Logins */}
+      <div class="alternative-login">
+        <div class="divider-row">
+          <span class="divider-line"></span>
+          <span class="divider-text">or continue with</span>
+          <span class="divider-line"></span>
+        </div>
+        
+        <button type="button" class="google-btn" disabled={pending} onClick={continueWithGoogle}>
+          <svg class="google-icon" width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          <span>Continue with Google</span>
+        </button>
+      </div>
     </AuthShell>
   )
 }
 
-function Field({ label, name, type = 'text', value, onChange, error, autoComplete, placeholder, inputRef }) {
-  return <div className="field-group"><label htmlFor={name}>{label}</label><input ref={inputRef} id={name} name={name} type={type} value={value} onChange={onChange} autoComplete={autoComplete} placeholder={placeholder} spellCheck={type === 'email' ? false : undefined} aria-invalid={Boolean(error)} aria-describedby={error ? `${name}-error` : undefined} />{error && <p className="field-error" id={`${name}-error`}>{error}</p>}</div>
+function Field({ label, name, type = 'text', value, onChange, error, autoComplete, placeholder, inputRef, icon }) {
+  return (
+    <div class={`input-group ${error ? 'has-error' : ''}`}>
+      <label htmlFor={name} class="input-label">{label}</label>
+      <div class="input-wrapper">
+        {icon && <span class="input-icon-slot">{icon}</span>}
+        <input
+          ref={inputRef}
+          id={name}
+          name={name}
+          type={type}
+          value={value}
+          onChange={onChange}
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          spellCheck={type === 'email' ? false : undefined}
+          class="form-input"
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${name}-error` : undefined}
+        />
+      </div>
+      {error && <span class="error-msg" id={`${name}-error`} style={{ display: 'block' }}>{error}</span>}
+    </div>
+  )
 }
+
