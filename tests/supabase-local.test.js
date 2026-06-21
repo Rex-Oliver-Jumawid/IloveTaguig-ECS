@@ -27,6 +27,7 @@ let applicationId
 let ownerDocumentPath
 let submittedApplicationId
 let submittedDocumentPath
+let correctedDocumentPath
 
 async function createIdentity(name, role = 'owner') {
   const identity = identities[name]
@@ -97,6 +98,7 @@ beforeAll(async () => {
 afterAll(async () => {
   if (ownerDocumentPath) await service.storage.from('application-docs').remove([ownerDocumentPath])
   if (submittedDocumentPath) await service.storage.from('application-docs').remove([submittedDocumentPath])
+  if (correctedDocumentPath) await service.storage.from('application-docs').remove([correctedDocumentPath])
   if (applicationId) await service.from('applications').delete().eq('id', applicationId)
   if (submittedApplicationId) await service.from('applications').delete().eq('id', submittedApplicationId)
   for (const user of Object.values(users)) await service.auth.admin.deleteUser(user.id)
@@ -188,5 +190,33 @@ describe('local Supabase RLS boundaries', () => {
     expect(ownerRead.data?.status).toBe('Pending Review')
     expect(metadataRead.data?.storage_path).toBe(submittedDocumentPath)
     expect(otherOwnerRead.data).toEqual([])
+  })
+
+  it('allows only the owner to atomically resubmit an Action Required document set', async () => {
+    const adminUpdate = await clients.admin.from('applications').update({ status: 'Action Required', remarks: 'Upload a clearer registration copy.' }).eq('id', applicationId)
+    expect(adminUpdate.error).toBeNull()
+
+    correctedDocumentPath = `${users.ownerA.id}/${applicationId}/correction-proof.png`
+    const png = new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' })
+    const uploadResult = await clients.ownerA.storage.from('application-docs').upload(correctedDocumentPath, png)
+    expect(uploadResult.error).toBeNull()
+
+    const foreignAttempt = await clients.ownerB.rpc('resubmit_owner_application', {
+      application_id: applicationId,
+      documents: [{ storage_path: correctedDocumentPath, file_name: 'correction-proof.png', mime_type: 'image/png', file_size: 8 }],
+    })
+    expect(foreignAttempt.error).not.toBeNull()
+
+    const correction = await clients.ownerA.rpc('resubmit_owner_application', {
+      application_id: applicationId,
+      documents: [{ storage_path: correctedDocumentPath, file_name: 'correction-proof.png', mime_type: 'image/png', file_size: 8 }],
+    })
+    expect(correction.error).toBeNull()
+    expect(correction.data).toContain(ownerDocumentPath)
+
+    const applicationRead = await clients.ownerA.from('applications').select('status, remarks').eq('id', applicationId).single()
+    const documentsRead = await clients.ownerA.from('application_documents').select('storage_path').eq('application_id', applicationId)
+    expect(applicationRead.data).toEqual({ status: 'Pending Review', remarks: 'Upload a clearer registration copy.' })
+    expect(documentsRead.data).toEqual([{ storage_path: correctedDocumentPath }])
   })
 })

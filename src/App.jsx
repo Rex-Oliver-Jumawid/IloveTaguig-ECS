@@ -9,6 +9,7 @@ import RoleHomePage from './pages/RoleHomePage'
 import OwnerDashboardPage from './pages/OwnerDashboardPage'
 import NewApplicationPage from './pages/NewApplicationPage'
 import ApplicationStatusPage from './pages/ApplicationStatusPage'
+import ApplicationHistoryPage from './pages/ApplicationHistoryPage'
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/owner" element={<OwnerDashboardPage />} />
           <Route path="/owner/applications/new" element={<NewApplicationPage />} />
           <Route path="/owner/applications/:applicationId" element={<ApplicationStatusPage />} />
+          <Route path="/owner/history" element={<ApplicationHistoryPage />} />
         </Route>
         <Route element={<ProtectedRoute role="admin" />}>
           <Route path="/admin" element={<RoleHomePage role="admin" />} />
