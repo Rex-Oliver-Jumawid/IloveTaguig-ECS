@@ -85,7 +85,7 @@ export default function OwnerDashboardPage() {
     setLoadError('')
     const { data, error } = await supabase
       .from('applications')
-      .select('id, reference_no, business_name, nature_of_business, ownership_type, application_type, contact_number, business_address, status, remarks, created_at, updated_at')
+      .select('id, reference_no, owner_full_name, business_name, nature_of_business, ownership_type, application_type, contact_number, business_address, status, remarks, created_at, updated_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -668,7 +668,7 @@ export default function OwnerDashboardPage() {
             </div>
           </>
         ) : (
-          <div className="owner-applications-tab-view" style={{ padding: 'clamp(20px, 4vw, 32px)' }}>
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
             {currentActiveApp ? (
               <ApplicationStatusView
                 application={currentActiveApp}

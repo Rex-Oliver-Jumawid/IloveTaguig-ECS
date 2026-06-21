@@ -3357,6 +3357,12 @@ button:disabled {
   color: #137333;
 }
 
+.status-badge-figma.pending {
+  background-color: #FFFBEB !important;
+  color: #92400E !important;
+  border: 1px solid rgba(245, 158, 11, 0.2) !important;
+}
+
 .status-badge-figma.needs-update {
   background: #FCE8E6;
   color: #C5221F;

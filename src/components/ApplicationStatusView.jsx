@@ -22,13 +22,13 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-const STEPS = ['Submitted', 'Under Review', 'Action Required', 'Approved', 'Ready for Claiming', 'Complete']
+const STEPS = ['Submitted', 'Under Review', 'Approved', 'Ready for Claiming', 'Complete']
 const STEP_BY_STATUS = {
   'Pending Review': 1,
-  'Action Required': 2,
-  Approved: 3,
-  'Proceed to Barangay Hall': 4,
-  Complete: 5,
+  'Action Required': 1,
+  Approved: 2,
+  'Proceed to Barangay Hall': 3,
+  Complete: 4,
   Rejected: 1,
 }
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
@@ -176,20 +176,24 @@ export default function ApplicationStatusView({
               <span>Back</span>
             </button>
           )}
-          {application.status === 'Action Required' && (
-            <button 
-              className="update-btn-figma"
-              onClick={() => {
+          <button 
+            className="update-btn-figma"
+            onClick={() => {
+              if (application.status === 'Action Required') {
                 const element = document.getElementById('correction-form-section')
                 if (element) {
                   element.scrollIntoView({ behavior: 'smooth' })
                 }
-              }}
-            >
-              <RotateCcw size={16} />
-              <span>UPDATE APPLICATION</span>
-            </button>
-          )}
+              } else {
+                alert('You can only update or resubmit documents for this application when its status is "Action Required" (under review by Barangay staff).')
+              }
+            }}
+            style={application.status !== 'Action Required' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+            title={application.status !== 'Action Required' ? 'Updates are only allowed when Action is Required' : undefined}
+          >
+            <RotateCcw size={16} />
+            <span>UPDATE APPLICATION</span>
+          </button>
         </div>
       </div>
 
@@ -247,8 +251,12 @@ export default function ApplicationStatusView({
                       <div className="step-label-wrap">
                         <strong>{stepText}</strong>
                         <span className="step-subtext">
-                          {stepStatus === 'active' ? 'Awaiting update' : 
-                           stepStatus === 'complete' ? 'Completed' : 'Pending'}
+                          {stepStatus === 'complete' ? 'Completed' : 
+                           stepStatus === 'pending' ? 'Pending' : 
+                           stepStatus === 'rejected' ? 'Rejected' :
+                           (index === 1 && application.status === 'Action Required') ? 'Action Required' :
+                           (index === 1 && application.status === 'Pending Review') ? 'Awaiting update' :
+                           'Active'}
                         </span>
                       </div>
                     </div>
@@ -337,9 +345,26 @@ export default function ApplicationStatusView({
             <div className="card-body">
               <div className="documents-list-figma">
                 {documents.map((document) => {
-                  const isExpired = document.file_name.toLowerCase().includes('expired') || application.remarks?.toLowerCase().includes(document.file_name.toLowerCase()) && application.status === 'Action Required'
-                  const statusBadge = isExpired ? 'Needs Update' : 'Verified'
-                  const statusClass = isExpired ? 'needs-update' : 'verified'
+                  const isExpired = document.file_name.toLowerCase().includes('expired') || (application.remarks?.toLowerCase().includes(document.file_name.toLowerCase()) && application.status === 'Action Required')
+                  
+                  let statusBadge = 'Verified'
+                  let statusClass = 'verified'
+
+                  if (application.status === 'Pending Review' || application.status === 'Under Review') {
+                    statusBadge = 'Awaiting Review'
+                    statusClass = 'pending'
+                  } else if (application.status === 'Action Required') {
+                    if (isExpired) {
+                      statusBadge = 'Needs Update'
+                      statusClass = 'needs-update'
+                    } else {
+                      statusBadge = 'Verified'
+                      statusClass = 'verified'
+                    }
+                  } else if (application.status === 'Rejected') {
+                    statusBadge = 'Needs Update'
+                    statusClass = 'needs-update'
+                  }
 
                   return (
                     <div key={document.id} className="doc-row-figma">
