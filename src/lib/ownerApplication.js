@@ -1,8 +1,5 @@
 export function toOwnerVisibleApplication(application) {
-  if (!application) return application
-  return application.status === 'Approved'
-    ? { ...application, status: 'Pending Review' }
-    : application
+  return application
 }
 
 export function toOwnerVisibleApplications(applications = []) {
