@@ -3,7 +3,6 @@ import {
   Search, 
   ChevronLeft, 
   ChevronRight, 
-  Download, 
   Clock, 
   CheckCircle, 
   AlertTriangle, 
@@ -107,39 +106,7 @@ export default function HistoryView({ applications = [], onSelectApplication }) 
     return filteredAndSortedApps.slice(startIndex, startIndex + itemsPerPage)
   }, [filteredAndSortedApps, currentPage])
 
-  // CSV Exporter
-  const exportToCSV = () => {
-    const headers = ['Application ID', 'Business Name', 'Type', 'Date Submitted', 'Date Processed', 'Processing Time', 'Status']
-    const csvRows = filteredAndSortedApps.map(app => {
-      const appID = app.reference_no ?? `APP-${app.id.slice(0, 8).toUpperCase()}`
-      const dateSubmitted = formatDate(app.created_at) + ' ' + formatTime(app.created_at)
-      const dateProcessed = app.approved_at ? formatDate(app.approved_at) + ' ' + formatTime(app.approved_at) : '—'
-      const procTime = calculateProcessingTime(app)
-      return [
-        appID,
-        app.business_name,
-        app.application_type,
-        dateSubmitted,
-        dateProcessed,
-        procTime,
-        app.status
-      ]
-    })
-    
-    const csvContent = [headers, ...csvRows]
-      .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-      
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `ecs_applications_history_${new Date().toISOString().slice(0,10)}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
+
 
   // Row icon rendering
   const getRowIcon = (status) => {
@@ -207,16 +174,7 @@ export default function HistoryView({ applications = [], onSelectApplication }) 
             Complete record of all your Barangay Business Clearance requests.
           </p>
         </div>
-        
-        <button 
-          type="button" 
-          className="export-csv-btn" 
-          onClick={exportToCSV}
-          title="Export records to CSV file"
-        >
-          <Download size={14} />
-          <span>Export CSV</span>
-        </button>
+
       </header>
 
       {/* 2. Stats Bento Cards */}

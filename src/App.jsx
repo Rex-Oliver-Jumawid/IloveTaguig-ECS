@@ -5,7 +5,8 @@ import AuthPage from './pages/AuthPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
-import RoleHomePage from './pages/RoleHomePage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
+import AdminApplicationReviewPage from './pages/AdminApplicationReviewPage'
 import OwnerDashboardPage from './pages/OwnerDashboardPage'
 import NewApplicationPage from './pages/NewApplicationPage'
 import ApplicationStatusPage from './pages/ApplicationStatusPage'
@@ -29,7 +30,8 @@ export default function App() {
           <Route path="/owner/notifications" element={<OwnerDashboardPage initialTab="notifications" />} />
         </Route>
         <Route element={<ProtectedRoute role="admin" />}>
-          <Route path="/admin" element={<RoleHomePage role="admin" />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/applications/:applicationId" element={<AdminApplicationReviewPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>

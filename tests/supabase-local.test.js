@@ -28,6 +28,7 @@ let ownerDocumentPath
 let submittedApplicationId
 let submittedDocumentPath
 let correctedDocumentPath
+let approvalApplicationId
 
 async function createIdentity(name, role = 'owner') {
   const identity = identities[name]
@@ -101,6 +102,7 @@ afterAll(async () => {
   if (correctedDocumentPath) await service.storage.from('application-docs').remove([correctedDocumentPath])
   if (applicationId) await service.from('applications').delete().eq('id', applicationId)
   if (submittedApplicationId) await service.from('applications').delete().eq('id', submittedApplicationId)
+  if (approvalApplicationId) await service.from('applications').delete().eq('id', approvalApplicationId)
   for (const user of Object.values(users)) await service.auth.admin.deleteUser(user.id)
 })
 
@@ -193,8 +195,28 @@ describe('local Supabase RLS boundaries', () => {
   })
 
   it('allows only the owner to atomically resubmit an Action Required document set', async () => {
-    const adminUpdate = await clients.admin.from('applications').update({ status: 'Action Required', remarks: 'Upload a clearer registration copy.' }).eq('id', applicationId)
+    const invalidTransition = await clients.admin.rpc('review_application', {
+      application_id: applicationId, next_status: 'Complete', admin_remarks: '', checklist: {},
+    })
+    expect(invalidTransition.error).not.toBeNull()
+
+    const ownerReviewAttempt = await clients.ownerA.rpc('review_application', {
+      application_id: applicationId, next_status: 'Rejected', admin_remarks: 'Unauthorized', checklist: {},
+    })
+    expect(ownerReviewAttempt.error).not.toBeNull()
+
+    const adminUpdate = await clients.admin.rpc('review_application', {
+      application_id: applicationId,
+      next_status: 'Action Required',
+      admin_remarks: 'Upload a clearer registration copy.',
+      checklist: { address_verified: true },
+    })
     expect(adminUpdate.error).toBeNull()
+
+    const ownerNotification = await clients.ownerA.from('notifications')
+      .select('title, message').eq('reference_id', applicationId).eq('title', 'Action Required').single()
+    expect(ownerNotification.error).toBeNull()
+    expect(ownerNotification.data.message).toContain('Upload a clearer registration copy.')
 
     correctedDocumentPath = `${users.ownerA.id}/${applicationId}/correction-proof.png`
     const png = new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' })
@@ -218,5 +240,41 @@ describe('local Supabase RLS boundaries', () => {
     const documentsRead = await clients.ownerA.from('application_documents').select('storage_path').eq('application_id', applicationId)
     expect(applicationRead.data).toEqual({ status: 'Pending Review', remarks: 'Upload a clearer registration copy.' })
     expect(documentsRead.data).toEqual([{ storage_path: correctedDocumentPath }])
+  })
+
+  it('allows an admin to approve only a pending application and records the reviewer', async () => {
+    const inserted = await clients.ownerB.from('applications').insert({
+      owner_id: users.ownerB.id,
+      owner_full_name: identities.ownerB.fullName,
+      business_name: 'Approval Test Store',
+      nature_of_business: 'Services',
+      ownership_type: 'Sole Proprietorship',
+      application_type: 'New',
+      contact_number: '09170000002',
+      business_address: 'Barangay Napindan, Taguig City',
+    }).select('id').single()
+    expect(inserted.error).toBeNull()
+    approvalApplicationId = inserted.data.id
+
+    const approval = await clients.admin.rpc('review_application', {
+      application_id: approvalApplicationId,
+      next_status: 'Approved',
+      admin_remarks: '',
+      checklist: { address_verified: true, identity_verified: true, documents_complete: true, records_clear: true },
+    })
+    expect(approval.error).toBeNull()
+
+    const row = await clients.admin.from('applications')
+      .select('status, approved_at, approved_by, clerk_initial, verification_checklist')
+      .eq('id', approvalApplicationId).single()
+    expect(row.data.status).toBe('Approved')
+    expect(row.data.approved_at).toBeTruthy()
+    expect(row.data.approved_by).toBe(users.admin.id)
+    expect(row.data.clerk_initial).toBe('RA')
+
+    const secondReview = await clients.admin.rpc('review_application', {
+      application_id: approvalApplicationId, next_status: 'Rejected', admin_remarks: 'Changed mind', checklist: {},
+    })
+    expect(secondReview.error).not.toBeNull()
   })
 })
