@@ -122,6 +122,7 @@ export default function AdminGeneratedClearancePage() {
     if (!clearance?.generated_clearance_path) return
     setDownloading(true)
     setError('')
+    let objectUrl = ''
     try {
       const filename = clearanceFilename(clearance)
       const { data, error: downloadError } = await supabase.storage
@@ -130,8 +131,18 @@ export default function AdminGeneratedClearancePage() {
       if (downloadError || !data?.signedUrl) {
         throw downloadError || new Error('PDF download link was not created')
       }
+      const response = await fetch(data.signedUrl)
+      if (!response.ok) {
+        throw new Error('PDF download failed')
+      }
+
+      const contentType = response.headers.get('content-type') || 'application/pdf'
+      const blob = await response.blob()
+      const pdfBlob = blob.type === contentType ? blob : new Blob([blob], { type: contentType })
+      objectUrl = URL.createObjectURL(pdfBlob)
+
       const anchor = document.createElement('a')
-      anchor.href = data.signedUrl
+      anchor.href = objectUrl
       anchor.download = filename
       document.body.appendChild(anchor)
       anchor.click()
@@ -139,6 +150,7 @@ export default function AdminGeneratedClearancePage() {
     } catch {
       setError('Could not download the PDF. Please try refreshing the link.')
     } finally {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
       setDownloading(false)
     }
   }
