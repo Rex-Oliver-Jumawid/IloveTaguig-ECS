@@ -13,8 +13,7 @@ import {
   Bell,
   HelpCircle,
   ShieldCheck,
-  RefreshCw,
-  Printer
+  RefreshCw
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
@@ -65,7 +64,7 @@ export default function AdminApplicationReviewPage() {
     setLoading(true)
     setError('')
     const [appResult, docsResult, pendingResult] = await Promise.all([
-      supabase.from('applications').select('*').eq('id', applicationId).single(),
+      supabase.from('applications').select('id, owner_id, owner_full_name, business_name, nature_of_business, ownership_type, application_type, contact_number, business_address, status, remarks, reference_no, approved_at, approved_by, clerk_initial, created_at, updated_at, verification_checklist').eq('id', applicationId).single(),
       supabase.from('application_documents').select('*').eq('application_id', applicationId).order('created_at'),
       supabase.from('applications')
         .select('id, business_name, owner_full_name, status, created_at')
@@ -101,14 +100,24 @@ export default function AdminApplicationReviewPage() {
       setError('Remarks are required when requesting info or rejecting.'); return
     }
     setSaving(true); setError('')
-    const { error: reviewError } = await supabase.rpc('review_application', {
-      application_id: applicationId,
-      next_status: nextStatus,
-      admin_remarks: remarks,
-      checklist,
-    })
+    const result = await supabase.rpc('review_application', {
+          application_id: applicationId,
+          next_status: nextStatus,
+          admin_remarks: remarks,
+          checklist,
+        })
     setSaving(false)
-    if (reviewError) { setError(reviewError.message); return }
+    if (result.error) {
+      let message = result.error.message
+      try {
+        const payload = await result.error.context?.json?.()
+        if (payload?.error) message = payload.error
+      } catch {
+        // Keep the client error when the function response has no JSON body.
+      }
+      setError(message)
+      return
+    }
     navigate('/admin')
   }
 
@@ -379,19 +388,6 @@ export default function AdminApplicationReviewPage() {
                     <span className="ar-summary-val">{checklistDone}/{CHECKLIST_ITEMS.length} verified</span>
                   </div>
                 </div>
-                {['Approved', 'Proceed to Barangay Hall'].includes(application.status) && application.generated_pdf_path && (
-                  <button
-                    type="button"
-                    className="ar-print-btn"
-                    onClick={async () => {
-                      const { data } = await supabase.storage.from('generated-clearances').createSignedUrl(application.generated_pdf_path, 300)
-                      if (data?.signedUrl) window.open(data.signedUrl, '_blank')
-                    }}
-                  >
-                    <Printer size={14} />
-                    Print Clearance
-                  </button>
-                )}
               </div>
 
               {/* Make a Decision Panel */}
@@ -403,7 +399,7 @@ export default function AdminApplicationReviewPage() {
 
                 <p className="ar-decision-hint">
                   Review all documents and the checklist above before approving or rejecting this application.
-                  Approved applications will auto-generate the Business Clearance.
+                  Approved applications move to the Print Queue for certificate generation.
                 </p>
 
                 {/* Remarks */}

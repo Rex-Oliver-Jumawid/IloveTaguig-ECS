@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Clock,
   Clock3,
-  Download,
   Eye,
   FileText,
   HelpCircle,
@@ -27,6 +26,7 @@ import NotificationsView from '../components/NotificationsView'
 import SettingsView from '../components/SettingsView'
 import HistoryView from '../components/HistoryView'
 import OwnersView from '../components/OwnersView'
+import PrintQueueView from '../components/PrintQueueView'
 
 function getInitials(name) {
   if (!name) return '??'
@@ -74,7 +74,7 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
     if (!user) return
     const { count, error: countError } = await supabase
       .from('notifications')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('is_read', false)
     if (!countError) {
@@ -105,7 +105,7 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
   const load = useCallback(async () => {
     setLoading(true)
     const { data, error: loadError } = await supabase.from('applications')
-      .select('*')
+      .select('id, owner_id, owner_full_name, business_name, nature_of_business, ownership_type, application_type, contact_number, business_address, status, remarks, reference_no, approved_at, approved_by, clerk_initial, created_at, updated_at, verification_checklist')
       .order('created_at', { ascending: false })
     setApplications(data ?? [])
     setError(loadError ? 'The review queue could not be loaded.' : '')
@@ -136,50 +136,10 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
 
   // Helper for printing a clearance PDF
   const handlePrint = async (app) => {
-    if (!app.generated_pdf_path) {
-      alert('No generated clearance PDF found for this application.')
-      return
-    }
-    try {
-      const { data, error: signError } = await supabase.storage
-        .from('generated-clearances')
-        .createSignedUrl(app.generated_pdf_path, 300)
-      if (signError) throw signError
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank')
-      }
-    } catch (err) {
-      console.error('Error signing PDF url:', err)
-      alert('Could not download clearance PDF.')
-    }
+    navigate(`/admin/clearances/${app.id}`)
   }
 
-  // Helper to export CSV
-  const handleExportCSV = () => {
-    const headers = ['Applicant Name', 'Business Name', 'Application ID', 'Type', 'Submitted Date', 'Status']
-    const rows = sortedApplications.map(app => [
-      app.owner_full_name,
-      app.business_name,
-      app.id,
-      app.application_type,
-      new Date(app.created_at).toLocaleDateString(),
-      app.status
-    ])
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `pending_applications_${new Date().toISOString().slice(0,10)}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
   // Calculated Stats
   const stats = useMemo(() => {
@@ -573,6 +533,11 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
             />
           </div>
 
+        ) : activeTab === 'printqueue' ? (
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+            <PrintQueueView />
+          </div>
+
         ) : (
           /* Dashboard / Applications / Pending / Print Queue / Applicants tabs */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
@@ -925,7 +890,12 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
                 <div className="figma-admin-card figma-admin-breakdown-card figma-admin-quick-actions">
                   <h3>Quick Actions</h3>
                   <div className="figma-admin-action-list">
-                    <Link to="/admin" className="figma-admin-action-link">
+                    <button
+                      type="button"
+                      className="figma-admin-action-link"
+                      style={{ background: 'transparent', textAlign: 'left', width: '100%', cursor: 'pointer' }}
+                      onClick={() => setActiveTab('printqueue')}
+                    >
                       <div className="figma-admin-action-icon-box">
                         <Printer size={18} />
                       </div>
@@ -933,22 +903,13 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
                         <span className="figma-admin-action-title">Print Queue ({counts.claiming})</span>
                         <span className="figma-admin-action-desc">Clearances ready to print</span>
                       </div>
-                    </Link>
+                    </button>
                     <button
                       type="button"
-                      onClick={handleExportCSV}
                       className="figma-admin-action-link"
                       style={{ background: 'transparent', textAlign: 'left', width: '100%', cursor: 'pointer' }}
+                      onClick={() => setActiveTab('owners')}
                     >
-                      <div className="figma-admin-action-icon-box">
-                        <Download size={18} />
-                      </div>
-                      <div className="figma-admin-action-info">
-                        <span className="figma-admin-action-title">Export Reports</span>
-                        <span className="figma-admin-action-desc">Download application data as CSV</span>
-                      </div>
-                    </button>
-                    <Link to="/admin" className="figma-admin-action-link">
                       <div className="figma-admin-action-icon-box">
                         <Users size={18} />
                       </div>
@@ -956,7 +917,8 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
                         <span className="figma-admin-action-title">Manage Applicants</span>
                         <span className="figma-admin-action-desc">View registered business owners</span>
                       </div>
-                    </Link>
+                    </button>
+
                   </div>
                 </div>
               </div>

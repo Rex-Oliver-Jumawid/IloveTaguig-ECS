@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', 'legacy', 'script.js', 'dashboard.js'] },
+  { ignores: ['dist', 'legacy', 'script.js', 'dashboard.js', 'assets/templates/**/*.js'] },
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx}'],

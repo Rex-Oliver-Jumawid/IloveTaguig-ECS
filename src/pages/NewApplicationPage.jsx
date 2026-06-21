@@ -57,7 +57,7 @@ export default function NewApplicationPage() {
       try {
         const { count, error } = await supabase
           .from('applications')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('owner_id', user.id)
         if (!error && count !== null) {
           setAppCount(count)

@@ -56,7 +56,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
     if (!user) return
     const { count, error } = await supabase
       .from('notifications')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('is_read', false)
     if (!error) {
@@ -756,9 +756,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
             <HistoryView 
               applications={applications} 
               onSelectApplication={(app) => {
-                setViewingApp(app)
-                setActiveTab('applications')
-                navigate('/owner')
+                navigate(`/owner/applications/${app.id}`)
               }}
             />
           </div>

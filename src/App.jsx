@@ -10,6 +10,7 @@ import AdminApplicationReviewPage from './pages/AdminApplicationReviewPage'
 import OwnerDashboardPage from './pages/OwnerDashboardPage'
 import NewApplicationPage from './pages/NewApplicationPage'
 import ApplicationStatusPage from './pages/ApplicationStatusPage'
+import AdminGeneratedClearancePage from './pages/AdminGeneratedClearancePage'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/admin/notifications" element={<AdminDashboardPage initialTab="notifications" />} />
           <Route path="/admin/settings" element={<AdminDashboardPage initialTab="settings" />} />
           <Route path="/admin/applications/:applicationId" element={<AdminApplicationReviewPage />} />
+          <Route path="/admin/clearances/:applicationId" element={<AdminGeneratedClearancePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>

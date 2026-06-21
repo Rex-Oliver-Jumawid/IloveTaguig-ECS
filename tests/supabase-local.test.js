@@ -29,6 +29,8 @@ let submittedApplicationId
 let submittedDocumentPath
 let correctedDocumentPath
 let approvalApplicationId
+let secondApprovalApplicationId
+let generatedClearancePath
 
 async function createIdentity(name, role = 'owner') {
   const identity = identities[name]
@@ -58,6 +60,10 @@ beforeAll(async () => {
   await createIdentity('ownerA')
   await createIdentity('ownerB')
   await createIdentity('admin', 'admin')
+  const { error: settingsError } = await service.from('barangay_settings').update({
+    punong_barangay_name: 'Test Punong Barangay', validity_year: new Date().getFullYear(),
+  }).eq('id', true)
+  if (settingsError) throw settingsError
 
   const { data, error } = await clients.ownerA.from('applications').insert({
     owner_id: users.ownerA.id,
@@ -103,6 +109,8 @@ afterAll(async () => {
   if (applicationId) await service.from('applications').delete().eq('id', applicationId)
   if (submittedApplicationId) await service.from('applications').delete().eq('id', submittedApplicationId)
   if (approvalApplicationId) await service.from('applications').delete().eq('id', approvalApplicationId)
+  if (secondApprovalApplicationId) await service.from('applications').delete().eq('id', secondApprovalApplicationId)
+  if (generatedClearancePath) await service.storage.from('generated-clearances').remove([generatedClearancePath])
   for (const user of Object.values(users)) await service.auth.admin.deleteUser(user.id)
 })
 
@@ -242,7 +250,7 @@ describe('local Supabase RLS boundaries', () => {
     expect(documentsRead.data).toEqual([{ storage_path: correctedDocumentPath }])
   })
 
-  it('allows an admin to approve only a pending application and records the reviewer', async () => {
+  it('prepares, safely retries, and finalizes an admin clearance with a unique reference', async () => {
     const inserted = await clients.ownerB.from('applications').insert({
       owner_id: users.ownerB.id,
       owner_full_name: identities.ownerB.fullName,
@@ -256,13 +264,15 @@ describe('local Supabase RLS boundaries', () => {
     expect(inserted.error).toBeNull()
     approvalApplicationId = inserted.data.id
 
+    const checklist = { address_verified: true, identity_verified: true, documents_complete: true, records_clear: true }
     const approval = await clients.admin.rpc('review_application', {
       application_id: approvalApplicationId,
       next_status: 'Approved',
       admin_remarks: '',
-      checklist: { address_verified: true, identity_verified: true, documents_complete: true, records_clear: true },
+      checklist,
     })
     expect(approval.error).toBeNull()
+    expect(approval.data.reference_no).toMatch(/^NAPINDAN-\d{4}-\d{6}$/)
 
     const row = await clients.admin.from('applications')
       .select('status, approved_at, approved_by, clerk_initial, verification_checklist')
@@ -272,9 +282,68 @@ describe('local Supabase RLS boundaries', () => {
     expect(row.data.approved_by).toBe(users.admin.id)
     expect(row.data.clerk_initial).toBe('RA')
 
-    const secondReview = await clients.admin.rpc('review_application', {
-      application_id: approvalApplicationId, next_status: 'Rejected', admin_remarks: 'Changed mind', checklist: {},
+    const retry = await clients.admin.rpc('prepare_clearance', {
+      application_id: approvalApplicationId, admin_remarks: '', checklist,
     })
-    expect(secondReview.error).not.toBeNull()
+    expect(retry.error).toBeNull()
+    expect(retry.data.reference_no).toBe(approval.data.reference_no)
+
+    generatedClearancePath = `${approvalApplicationId}/${approval.data.reference_no}.pdf`
+    const pdfUpload = await clients.admin.storage.from('generated-clearances').upload(
+      generatedClearancePath,
+      new Blob([new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52])], { type: 'application/pdf' }),
+    )
+    expect(pdfUpload.error).toBeNull()
+    const finalized = await clients.admin.rpc('finalize_clearance', {
+      application_id: approvalApplicationId, clearance_path: generatedClearancePath,
+    })
+    expect(finalized.error).toBeNull()
+    expect(finalized.data).toBe('Proceed to Barangay Hall')
+
+    const ownerMetadataAttempt = await clients.ownerB.from('applications')
+      .select('generated_clearance_path').eq('id', approvalApplicationId)
+    expect(ownerMetadataAttempt.error).not.toBeNull()
+    const ownerDownload = await clients.ownerB.storage.from('generated-clearances').download(generatedClearancePath)
+    expect(ownerDownload.error).not.toBeNull()
+    const ownerDetails = await clients.ownerB.rpc('get_generated_clearance', { application_id: approvalApplicationId })
+    expect(ownerDetails.error).not.toBeNull()
+
+    const proceedNotification = await clients.ownerB.from('notifications')
+      .select('title').eq('reference_id', approvalApplicationId).eq('title', 'Proceed to Barangay Hall').single()
+    expect(proceedNotification.error).toBeNull()
+  })
+
+  it('enforces completion transitions and emits a Complete notification', async () => {
+    const ownerAttempt = await clients.ownerB.rpc('complete_clearance', { application_id: approvalApplicationId })
+    expect(ownerAttempt.error).not.toBeNull()
+
+    const completed = await clients.admin.rpc('complete_clearance', { application_id: approvalApplicationId })
+    expect(completed.error).toBeNull()
+    expect(completed.data).toBe('Complete')
+    const repeated = await clients.admin.rpc('complete_clearance', { application_id: approvalApplicationId })
+    expect(repeated.error).not.toBeNull()
+
+    const notification = await clients.ownerB.from('notifications')
+      .select('title').eq('reference_id', approvalApplicationId).eq('title', 'Clearance Complete').single()
+    expect(notification.error).toBeNull()
+  })
+
+  it('generates different sequential references for separate applications', async () => {
+    const inserted = await clients.ownerA.from('applications').insert({
+      owner_id: users.ownerA.id, owner_full_name: identities.ownerA.fullName,
+      business_name: 'Second Approval Store', nature_of_business: 'Retail',
+      ownership_type: 'Sole Proprietorship', application_type: 'Renewal',
+      contact_number: '09170000003', business_address: 'Barangay Napindan, Taguig City',
+    }).select('id').single()
+    expect(inserted.error).toBeNull()
+    secondApprovalApplicationId = inserted.data.id
+    const prepared = await clients.admin.rpc('review_application', {
+      application_id: secondApprovalApplicationId, next_status: 'Approved', admin_remarks: '',
+      checklist: { address_verified: true, identity_verified: true, documents_complete: true, records_clear: true },
+    })
+    expect(prepared.error).toBeNull()
+    const first = Number(generatedClearancePath.match(/(\d{6})[.]pdf$/)[1])
+    const second = Number(prepared.data.reference_no.slice(-6))
+    expect(second).toBeGreaterThan(first)
   })
 })
