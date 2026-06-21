@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:supabase": "vitest run tests/supabase-local.test.js",
+    "seed:local": "node scripts/seed-local.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
@@ -27,6 +29,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.2.0",
-    "vite": "^6.3.0"
+    "vite": "^6.3.0",
+    "vitest": "^4.1.9"
   }
 }

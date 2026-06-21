@@ -6,6 +6,9 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import RoleHomePage from './pages/RoleHomePage'
+import OwnerDashboardPage from './pages/OwnerDashboardPage'
+import NewApplicationPage from './pages/NewApplicationPage'
+import ApplicationStatusPage from './pages/ApplicationStatusPage'
 
 export default function App() {
   return (
@@ -19,7 +22,9 @@ export default function App() {
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route element={<ProtectedRoute role="owner" />}>
-          <Route path="/owner" element={<RoleHomePage role="owner" />} />
+          <Route path="/owner" element={<OwnerDashboardPage />} />
+          <Route path="/owner/applications/new" element={<NewApplicationPage />} />
+          <Route path="/owner/applications/:applicationId" element={<ApplicationStatusPage />} />
         </Route>
         <Route element={<ProtectedRoute role="admin" />}>
           <Route path="/admin" element={<RoleHomePage role="admin" />} />
