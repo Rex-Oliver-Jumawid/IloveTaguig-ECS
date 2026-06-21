@@ -214,7 +214,7 @@ export default function NewApplicationPage() {
                 </Link>
               </li>
               <li>
-                <Link to="/owner" className="nav-link active" title={isSidebarMinimized ? "Applications" : undefined}>
+                <Link to="/owner#applications" className="nav-link" title={isSidebarMinimized ? "Applications" : undefined}>
                   <FileText className="nav-icon" />
                   {!isSidebarMinimized && (
                     <>

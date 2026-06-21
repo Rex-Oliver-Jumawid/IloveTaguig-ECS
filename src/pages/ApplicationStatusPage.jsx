@@ -4,7 +4,15 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 
-const STEPS = ['Pending Review', 'Approved', 'Proceed to Barangay Hall', 'Complete']
+const STEPS = ['Submitted', 'Under Review', 'Action Required', 'Approved', 'Proceed to Barangay Hall', 'Complete']
+const STEP_BY_STATUS = {
+  'Pending Review': 1,
+  'Action Required': 2,
+  Approved: 3,
+  'Proceed to Barangay Hall': 4,
+  Complete: 5,
+  Rejected: 1,
+}
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
 const MAX_SIZE = 10 * 1024 * 1024
 const MAX_FILES = 5
@@ -87,16 +95,16 @@ export default function ApplicationStatusPage() {
   if (!application) return <main className="application-status-page"><div className="application-status-card"><p>Loading application…</p></div></main>
 
   const statusClass = application.status.toLowerCase().replaceAll(' ', '-')
-  const currentStep = application.status === 'Action Required' ? 0 : STEPS.indexOf(application.status)
-  const interrupted = application.status === 'Action Required' || application.status === 'Rejected'
+  const currentStep = STEP_BY_STATUS[application.status] ?? 0
+  const interrupted = application.status === 'Rejected'
 
   return <main className="application-status-page"><div className="application-status-wrap">
     <Link className="application-back" to="/owner"><ArrowLeft size={18} /> Dashboard</Link>
     {(location.state?.submitted || resubmitted) && <div className="application-success"><CheckCircle2 size={20} /><span><strong>{resubmitted ? 'Corrections resubmitted' : 'Application submitted'}</strong>{resubmitted ? 'Your corrected documents are back in the review queue.' : 'Your request is now in the barangay review queue.'}</span></div>}
     <section className="application-status-card">
       <div className="application-status-head"><div><p>APPLICATION #{application.id.slice(0, 8).toUpperCase()}</p><h1>{application.business_name}</h1><span>Submitted {new Intl.DateTimeFormat('en-PH', { dateStyle: 'long' }).format(new Date(application.created_at))}</span></div><span className={`owner-status owner-status--${statusClass}`}><Clock3 size={14} /> {application.status}</span></div>
-      <div className={`application-progress ${interrupted ? 'interrupted' : ''}`} aria-label={`Application progress: ${application.status}`}>{STEPS.map((step, index) => { const complete = !interrupted && currentStep > index; const active = !interrupted && currentStep === index; return <div key={step} className={complete ? 'complete' : active ? 'active' : ''}><span>{complete ? <Check size={16} /> : index + 1}</span><strong>{step}</strong></div> })}</div>
-      {interrupted && <div className={`application-interruption ${application.status === 'Rejected' ? 'rejected' : ''}`}><AlertCircle size={20} /><span><strong>{application.status}</strong>{application.status === 'Action Required' ? 'Review the barangay remarks and replace your supporting documents below.' : 'This request will not proceed. Review the barangay remarks for details.'}</span></div>}
+      <div className={`application-progress ${interrupted ? 'interrupted' : ''}`} aria-label={`Application progress: ${application.status}`}>{STEPS.map((step, index) => { const complete = currentStep > index; const active = !interrupted && currentStep === index; return <div key={step} className={complete ? 'complete' : active ? 'active' : ''}><span>{complete ? <Check size={16} /> : index + 1}</span><strong>{step}</strong></div> })}</div>
+      {(application.status === 'Action Required' || interrupted) && <div className={`application-interruption ${application.status === 'Rejected' ? 'rejected' : ''}`}><AlertCircle size={20} /><span><strong>{application.status}</strong>{application.status === 'Action Required' ? 'Review the barangay remarks and replace your supporting documents below.' : 'This request will not proceed. Review the barangay remarks for details.'}</span></div>}
       {application.remarks && <section className="application-remarks"><MessageSquareText size={21} /><div><h2>Barangay remarks</h2><p>{application.remarks}</p><small>Latest update {new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(application.updated_at))}</small></div></section>}
       <div className="application-status-grid"><div><span>Application type</span><strong>{application.application_type}</strong></div><div><span>Ownership</span><strong>{application.ownership_type}</strong></div><div><span>Nature of business</span><strong>{application.nature_of_business}</strong></div><div><span>Contact number</span><strong>{application.contact_number}</strong></div><div className="wide"><span>Registered address</span><strong>{application.business_address}</strong></div></div>
       <div className="application-document-summary"><h2>{application.status === 'Action Required' ? 'Current supporting documents' : 'Supporting documents'}</h2>{documents.map((document) => <div key={document.id}><FileText size={18} /><span>{document.file_name}</span><small>{(document.file_size / 1024 / 1024).toFixed(2)} MB</small></div>)}</div>

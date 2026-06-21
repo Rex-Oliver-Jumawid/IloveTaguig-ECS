@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { 
   Home, 
@@ -26,65 +26,11 @@ import {
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 
-const fallbackApplications = [
-  {
-    id: 'app-1',
-    reference_no: 'APP-2024-0891',
-    business_name: 'Napindan Convenience Store',
-    nature_of_business: 'Retail',
-    ownership_type: 'Sole Proprietorship',
-    application_type: 'Renewal',
-    contact_number: '09123456789',
-    business_address: '123 Main St, Barangay Napindan, Taguig City',
-    status: 'Action Required',
-    remarks: 'Your renewal application needs additional supporting documents. Please upload a valid Barangay Business Permit from last year.',
-    created_at: '2024-10-24T10:00:00.000Z'
-  },
-  {
-    id: 'app-2',
-    reference_no: 'APP-2024-0885',
-    business_name: 'Napindan Convenience Store',
-    nature_of_business: 'Retail',
-    ownership_type: 'Sole Proprietorship',
-    application_type: 'New',
-    contact_number: '09123456789',
-    business_address: '123 Main St, Barangay Napindan, Taguig City',
-    status: 'Pending Review',
-    remarks: 'Undergoing document evaluation by the Barangay clearance department.',
-    created_at: '2024-10-20T14:30:00.000Z'
-  },
-  {
-    id: 'app-3',
-    reference_no: 'APP-2024-0750',
-    business_name: 'Napindan Convenience Store',
-    nature_of_business: 'Retail',
-    ownership_type: 'Sole Proprietorship',
-    application_type: 'New',
-    contact_number: '09123456789',
-    business_address: '123 Main St, Barangay Napindan, Taguig City',
-    status: 'Proceed to Barangay Hall',
-    remarks: 'Please proceed to the Barangay Hall with your original government IDs to claim your printed clearance.',
-    created_at: '2024-10-15T09:15:00.000Z'
-  },
-  {
-    id: 'app-4',
-    reference_no: 'APP-2024-0622',
-    business_name: 'Napindan Bakery',
-    nature_of_business: 'Food Service',
-    ownership_type: 'Sole Proprietorship',
-    application_type: 'New',
-    contact_number: '09123456789',
-    business_address: '456 Baker St, Barangay Napindan, Taguig City',
-    status: 'Approved',
-    remarks: 'Clearance approved and signed. A copy has been generated.',
-    created_at: '2024-09-28T08:00:00.000Z'
-  }
-]
-
 export default function OwnerDashboardPage() {
   const { profile, user, signOut } = useAuth()
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
@@ -103,45 +49,25 @@ export default function OwnerDashboardPage() {
     })
   }, [])
 
-  // Fetch applications
-  useEffect(() => {
-    let active = true
-    async function getApps() {
-      if (!supabase || !user) {
-        setApplications(fallbackApplications)
-        setLoading(false)
-        return
-      }
+  const loadApplications = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    setLoadError('')
+    const { data, error } = await supabase
+      .from('applications')
+      .select('id, reference_no, business_name, nature_of_business, ownership_type, application_type, contact_number, business_address, status, remarks, created_at')
+      .order('created_at', { ascending: false })
 
-      try {
-        const { data, error } = await supabase
-          .from('applications')
-          .select('*')
-          .eq('owner_id', user.id)
-          .order('created_at', { ascending: false })
-
-        if (!active) return
-
-        if (error) {
-          console.error('Error fetching applications:', error)
-          setApplications(fallbackApplications)
-        } else if (data && data.length > 0) {
-          setApplications(data)
-        } else {
-          // If no records in database, show fallbacks so the dashboard is not empty
-          setApplications(fallbackApplications)
-        }
-      } catch (err) {
-        console.error('Fetch exception:', err)
-        if (active) setApplications(fallbackApplications)
-      } finally {
-        if (active) setLoading(false)
-      }
+    if (error) {
+      setApplications([])
+      setLoadError('Applications could not be loaded. Check your connection and try again.')
+    } else {
+      setApplications(data ?? [])
     }
-
-    getApps()
-    return () => { active = false }
+    setLoading(false)
   }, [user])
+
+  useEffect(() => { loadApplications() }, [loadApplications])
 
   // Filter applications by search query
   const filteredApps = useMemo(() => {
@@ -483,6 +409,7 @@ export default function OwnerDashboardPage() {
               </header>
 
               <div className="table-responsive-wrapper">
+                {loadError && <div className="owner-inline-error dashboard-load-error" role="alert"><AlertTriangle size={18} /><span>{loadError}</span><button type="button" onClick={loadApplications}>Try again</button></div>}
                 <table className="applications-table">
                   <thead>
                     <tr>
@@ -798,6 +725,9 @@ export default function OwnerDashboardPage() {
               >
                 Close Details
               </button>
+              <Link className="modal-action-btn primary-btn" to={`/owner/applications/${selectedApp.id}`} onClick={() => setSelectedApp(null)}>
+                Open status page
+              </Link>
             </footer>
           </div>
         </div>
