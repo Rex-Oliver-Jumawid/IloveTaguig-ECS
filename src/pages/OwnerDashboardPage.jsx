@@ -669,7 +669,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
                       </div>
                     </button>
 
-                    <button type="button" className="quick-action-item" onClick={triggerHistory}>
+                    <Link to="/owner/history" className="quick-action-item">
                       <div className="action-icon-wrapper">
                         <History />
                       </div>
@@ -677,7 +677,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
                         <h5>View History</h5>
                         <p>All past clearance records</p>
                       </div>
-                    </button>
+                    </Link>
                   </div>
                 </div>
 

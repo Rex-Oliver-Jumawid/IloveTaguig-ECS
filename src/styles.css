@@ -2516,6 +2516,7 @@ button:disabled {
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
   padding: 16px 24px;
   border-top: 1px solid var(--slate-200);
   background-color: var(--slate-50);

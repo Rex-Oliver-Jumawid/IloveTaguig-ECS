@@ -421,6 +421,7 @@ export default function ApplicationStatusView({
                       type="file"
                       multiple
                       accept=".pdf,.jpg,.jpeg,.png"
+                      style={{ display: 'none' }}
                       onChange={(event) => {
                         addFiles(event.target.files)
                         event.target.value = ''
