@@ -1880,7 +1880,7 @@ button:disabled {
 .card-header-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px; /* Tight gap as requested */
 }
 
 .title-indicator {
@@ -2699,7 +2699,7 @@ button:disabled {
   padding: 24px 24px 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px; /* Tight gap as requested */
   border-bottom: 1px solid var(--slate-100);
 }
 .form-section-card-body {
@@ -2882,7 +2882,16 @@ button:disabled {
 .figma-status-header .title-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px; /* Tight gap as requested */
+}
+
+.figma-status-header .title-indicator {
+  width: 5px;
+  height: 26px; /* Proportional to 2.25rem heading size */
+  background-color: var(--orange-primary);
+  border-radius: 3px;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .figma-status-header .title-row h2 {
@@ -3065,18 +3074,44 @@ button:disabled {
   padding: 0;
 }
 
-/* Progress Bar */
+/* Progress Bar (Horizontal Alignment) */
 .figma-progress-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 4px 0;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  padding: 16px 0 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  gap: 16px;
 }
 
 .progress-step-item {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  min-width: 96px;
   position: relative;
+}
+
+.progress-step-item:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: -50%;
+  right: 50%;
+  top: 14px; /* Center with circle */
+  height: 2px;
+  background: #E5E7EB;
+  z-index: 1;
+}
+
+.progress-step-item.complete:not(:first-child)::before,
+.progress-step-item.active:not(:first-child)::before {
+  background: var(--teal-primary);
 }
 
 .step-circle-container {
@@ -3085,6 +3120,7 @@ button:disabled {
   align-items: center;
   position: relative;
   flex-shrink: 0;
+  margin-bottom: 8px;
 }
 
 .step-circle {
@@ -3104,34 +3140,26 @@ button:disabled {
 }
 
 .step-line {
-  width: 2px;
-  position: absolute;
-  top: 28px;
-  bottom: -28px;
-  background: #E5E7EB;
-  z-index: 1;
-}
-
-.progress-step-item:last-child .step-line {
-  display: none;
+  display: none; /* Hidden for horizontal timeline */
 }
 
 .step-label-wrap {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
-  padding-top: 3px;
 }
 
 .step-label-wrap strong {
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   color: var(--slate-700);
   font-weight: 600;
+  line-height: 1.25;
   transition: all 0.25s ease;
 }
 
 .step-label-wrap .step-subtext {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--slate-400);
 }
 
@@ -3140,10 +3168,6 @@ button:disabled {
   background: var(--teal-primary);
   border-color: var(--teal-primary);
   color: var(--white);
-}
-
-.progress-step-item.complete .step-line {
-  background: var(--teal-primary);
 }
 
 .progress-step-item.complete strong {
@@ -3567,7 +3591,7 @@ button:disabled {
 /* Help Card styling */
 .help-card-figma {
   background: linear-gradient(165deg, #075f57 0%, #0a7f73 58%, #07534d 100%) !important;
-  color: var(--white);
+  color: var(--white) !important;
   position: relative;
   overflow: hidden;
   border: none !important;
@@ -3586,14 +3610,15 @@ button:disabled {
   font-weight: 700;
   margin-top: 16px;
   margin-bottom: 8px;
-  color: var(--white);
+  color: var(--white) !important;
 }
 
 .help-card-figma p {
   font-size: 0.8rem;
   line-height: 1.5;
-  opacity: 0.85;
+  opacity: 0.95;
   margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.95) !important; /* Forces high readability text color */
 }
 
 .help-icon-wrap {
@@ -3604,8 +3629,12 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--white);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--white) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.help-icon-wrap svg {
+  color: var(--white) !important;
 }
 
 .help-action-btn-figma {
@@ -3618,7 +3647,7 @@ button:disabled {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  color: var(--white);
+  color: var(--white) !important;
   font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
@@ -3631,6 +3660,11 @@ button:disabled {
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.35);
   transform: translateY(-1px);
+  color: var(--white) !important;
+}
+
+.help-action-btn-figma svg {
+  color: var(--white) !important;
 }
 
 /* Other apps list */
