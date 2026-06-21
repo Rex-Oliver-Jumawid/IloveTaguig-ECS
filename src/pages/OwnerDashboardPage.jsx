@@ -295,14 +295,14 @@ export default function OwnerDashboardPage() {
 
           {/* New Application CTA */}
           <div className="sidebar-action">
-            <button 
+            <Link 
+              to="/owner/applications/new"
               className="new-app-btn" 
-              onClick={triggerWizard}
               title={isSidebarMinimized ? "New Application" : undefined}
             >
               <Plus className="btn-icon" size={18} strokeWidth={2.5} />
               {!isSidebarMinimized && <span>NEW APPLICATION</span>}
-            </button>
+            </Link>
           </div>
 
           {/* Navigation Links */}
@@ -588,7 +588,7 @@ export default function OwnerDashboardPage() {
                 </div>
               </header>
               <div className="widget-content quick-actions-list">
-                <button type="button" className="quick-action-item active-action" onClick={triggerWizard}>
+                <Link to="/owner/applications/new" className="quick-action-item active-action">
                   <div className="action-icon-wrapper">
                     <Plus />
                   </div>
@@ -596,7 +596,7 @@ export default function OwnerDashboardPage() {
                     <h5>New Application</h5>
                     <p>Submit a clearance request</p>
                   </div>
-                </button>
+                </Link>
 
                 <button type="button" className="quick-action-item" onClick={triggerTrack}>
                   <div className="action-icon-wrapper">
