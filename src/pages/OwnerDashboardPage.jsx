@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { 
   Home, 
   FileText, 
@@ -27,9 +27,12 @@ import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import ApplicationStatusView from '../components/ApplicationStatusView'
 import SettingsView from '../components/SettingsView'
+import HistoryView from '../components/HistoryView'
+import NotificationsView from '../components/NotificationsView'
 
-export default function OwnerDashboardPage() {
+export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
   const { profile, user, signOut } = useAuth()
+  const navigate = useNavigate()
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -41,7 +44,54 @@ export default function OwnerDashboardPage() {
   const [infoModalOpen, setInfoModalOpen] = useState(false)
   const [infoModalMsg, setInfoModalMsg] = useState('')
 
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState(initialTab)
+
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
+
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
+
+  const loadUnreadCount = useCallback(async () => {
+    if (!user) return
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false)
+    if (!error) {
+      setUnreadNotificationsCount(count ?? 0)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadUnreadCount()
+  }, [user, loadUnreadCount])
+
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => {
+          loadUnreadCount()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, loadUnreadCount])
+
+  useEffect(() => {
+    const mainContent = document.querySelector('.main-content')
+    if (mainContent) {
+      mainContent.scrollTop = 0
+    }
+  }, [activeTab])
   const [recentAppDocs, setRecentAppDocs] = useState([])
   const [docsLoading, setDocsLoading] = useState(false)
   const [docsError, setDocsError] = useState('')
@@ -266,11 +316,10 @@ export default function OwnerDashboardPage() {
           <nav className="sidebar-nav" aria-label="Sidebar navigation">
             <ul className="nav-list">
               <li>
-                <a
-                  href="#dashboard"
+                <Link
+                  to="/owner"
                   className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault()
+                  onClick={() => {
                     setActiveTab('dashboard')
                     setIsMobileSidebarOpen(false)
                   }}
@@ -278,14 +327,13 @@ export default function OwnerDashboardPage() {
                 >
                   <Home className="nav-icon" />
                   {!isSidebarMinimized && <span>Dashboard</span>}
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#applications"
+                <Link
+                  to="/owner"
                   className={`nav-link ${activeTab === 'applications' ? 'active' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault()
+                  onClick={() => {
                     setActiveTab('applications')
                     setViewingApp(null) // reset to most recent
                     setIsMobileSidebarOpen(false)
@@ -299,31 +347,48 @@ export default function OwnerDashboardPage() {
                       <span className="nav-badge">{applications.length}</span>
                     </>
                   )}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#certifications" className="nav-link" onClick={triggerHistory} title={isSidebarMinimized ? "Certifications" : undefined}>
-                  <Award className="nav-icon" />
-                  {!isSidebarMinimized && <span>Certifications</span>}
-                </a>
+                <Link
+                  to="/owner/notifications"
+                  className={`nav-link ${activeTab === 'notifications' ? 'active' : ''}`}
+                  title={isSidebarMinimized ? "Notifications" : undefined}
+                >
+                  <Bell className="nav-icon" />
+                  {!isSidebarMinimized && (
+                    <>
+                      <span>Notifications</span>
+                      {unreadNotificationsCount > 0 && (
+                        <span className="nav-badge">{unreadNotificationsCount}</span>
+                      )}
+                    </>
+                  )}
+                </Link>
               </li>
               <li>
-                <Link to="/owner/history" className="nav-link" title={isSidebarMinimized ? "History" : undefined}>
+                <Link 
+                  to="/owner/history" 
+                  className={`nav-link ${activeTab === 'history' ? 'active' : ''}`}
+                  title={isSidebarMinimized ? "History" : undefined}
+                >
                   <History className="nav-icon" />
                   {!isSidebarMinimized && <span>History</span>}
                 </Link>
               </li>
               <li>
-                <button
-                  type="button"
+                <Link
+                  to="/owner"
                   className={`nav-link ${activeTab === 'settings' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('settings')}
+                  onClick={() => {
+                    setActiveTab('settings')
+                    setIsMobileSidebarOpen(false)
+                  }}
                   title={isSidebarMinimized ? "Settings" : undefined}
-                  style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
                 >
                   <Settings className="nav-icon" />
                   {!isSidebarMinimized && <span>Settings</span>}
-                </button>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -381,15 +446,23 @@ export default function OwnerDashboardPage() {
 
 
           <div className="topbar-actions">
-            <button className="icon-btn-round notification-btn" aria-label="Notifications" onClick={() => {
-              setInfoModalMsg('🔔 Notifications:\nNo unread announcements. You will receive updates here as officers review your Clearance documents.')
-              setInfoModalOpen(true)
-            }}>
+            <Link 
+              to="/owner/notifications" 
+              className="icon-btn-round notification-btn" 
+              aria-label="Notifications"
+            >
               <Bell />
-              <span className="notification-badge"></span>
-            </button>
+              {unreadNotificationsCount > 0 && <span className="notification-badge"></span>}
+            </Link>
             
-            <button className="icon-btn-round" aria-label="Settings" onClick={() => setActiveTab('settings')}>
+            <button 
+              className="icon-btn-round" 
+              aria-label="Settings" 
+              onClick={() => {
+                setActiveTab('settings')
+                navigate('/owner')
+              }}
+             >
               <Settings />
             </button>
             
@@ -678,6 +751,30 @@ export default function OwnerDashboardPage() {
           <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
             <SettingsView profile={profile} user={user} />
           </div>
+        ) : activeTab === 'history' ? (
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+            <HistoryView 
+              applications={applications} 
+              onSelectApplication={(app) => {
+                setViewingApp(app)
+                setActiveTab('applications')
+                navigate('/owner')
+              }}
+            />
+          </div>
+        ) : activeTab === 'notifications' ? (
+          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+            <NotificationsView 
+              user={user}
+              applications={applications}
+              onSelectApplication={(app) => {
+                setViewingApp(app)
+                setActiveTab('applications')
+                navigate('/owner')
+              }}
+              onRefreshUnreadCount={loadUnreadCount}
+            />
+          </div>
         ) : (
           <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
             {currentActiveApp ? (
@@ -686,7 +783,10 @@ export default function OwnerDashboardPage() {
                 documents={recentAppDocs}
                 onRefresh={loadApplications}
                 user={user}
-                onBack={() => setActiveTab('dashboard')}
+                onBack={() => {
+                  setActiveTab('dashboard')
+                  navigate('/owner')
+                }}
                 allApplications={applications}
                 onSelectApplication={(app) => setViewingApp(app)}
               />
