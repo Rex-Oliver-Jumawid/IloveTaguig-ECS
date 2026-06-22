@@ -5957,6 +5957,7 @@ button:disabled {
   color: #6B7280;
   font-weight: 500;
   margin-top: 4px;
+  white-space: nowrap;
 }
 
 .figma-admin-card {
