@@ -332,7 +332,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
               </li>
               <li>
                 <Link
-                  to="/owner"
+                  to="/owner/applications"
                   className={`nav-link ${activeTab === 'applications' ? 'active' : ''}`}
                   onClick={() => {
                     setActiveTab('applications')
@@ -379,7 +379,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
               </li>
               <li>
                 <Link
-                  to="/owner"
+                  to="/owner/settings"
                   className={`nav-link ${activeTab === 'settings' ? 'active' : ''}`}
                   onClick={() => {
                     setActiveTab('settings')
@@ -461,7 +461,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
               aria-label="Settings" 
               onClick={() => {
                 setActiveTab('settings')
-                navigate('/owner')
+                navigate('/owner/settings')
               }}
              >
               <Settings />

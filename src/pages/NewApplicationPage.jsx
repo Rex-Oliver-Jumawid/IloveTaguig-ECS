@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import { 
   AlertCircle, 
   ArrowLeft, 
@@ -71,6 +71,43 @@ export default function NewApplicationPage() {
     }
     getAppCount()
   }, [user])
+
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // Fetch count of unread notifications for the sidebar badge
+  const loadUnreadCount = useCallback(async () => {
+    if (!supabase || !user) return
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false)
+    if (!error) {
+      setUnreadCount(count ?? 0)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadUnreadCount()
+  }, [user, loadUnreadCount])
+
+  useEffect(() => {
+    if (!supabase || !user) return
+    const channel = supabase
+      .channel('notifications-realtime-newapp')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => {
+          loadUnreadCount()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, loadUnreadCount])
 
   const ownerInitials = useMemo(() => {
     if (profile?.initials) return profile.initials
@@ -214,7 +251,7 @@ export default function NewApplicationPage() {
                 </Link>
               </li>
               <li>
-                <Link to="/owner#applications" className="nav-link" title={isSidebarMinimized ? "Applications" : undefined}>
+                <Link to="/owner/applications" className="nav-link" title={isSidebarMinimized ? "Applications" : undefined}>
                   <FileText className="nav-icon" />
                   {!isSidebarMinimized && (
                     <>
@@ -225,10 +262,15 @@ export default function NewApplicationPage() {
                 </Link>
               </li>
               <li>
-                <a href="#certifications" className="nav-link" onClick={(e) => { e.preventDefault(); alert('Certifications feature is coming soon.') }} title={isSidebarMinimized ? "Certifications" : undefined}>
-                  <Award className="nav-icon" />
-                  {!isSidebarMinimized && <span>Certifications</span>}
-                </a>
+                <Link to="/owner/notifications" className="nav-link" title={isSidebarMinimized ? "Notifications" : undefined}>
+                  <Bell className="nav-icon" />
+                  {!isSidebarMinimized && (
+                    <>
+                      <span>Notifications</span>
+                      {unreadCount > 0 && <span className="nav-badge">{unreadCount}</span>}
+                    </>
+                  )}
+                </Link>
               </li>
               <li>
                 <Link to="/owner/history" className="nav-link" title={isSidebarMinimized ? "History" : undefined}>
@@ -237,10 +279,10 @@ export default function NewApplicationPage() {
                 </Link>
               </li>
               <li>
-                <a href="#settings" className="nav-link" onClick={(e) => { e.preventDefault(); alert('Settings feature is coming soon.') }} title={isSidebarMinimized ? "Settings" : undefined}>
+                <Link to="/owner/settings" className="nav-link" title={isSidebarMinimized ? "Settings" : undefined}>
                   <Settings className="nav-icon" />
                   {!isSidebarMinimized && <span>Settings</span>}
-                </a>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -291,11 +333,11 @@ export default function NewApplicationPage() {
           </div>
 
           <div className="topbar-actions">
-            <button className="icon-btn-round notification-btn" aria-label="Notifications" onClick={() => alert('Notifications feature is coming soon.')}>
+            <button className="icon-btn-round notification-btn" aria-label="Notifications" onClick={() => navigate('/owner/notifications')}>
               <Bell />
-              <span className="notification-badge"></span>
+              {unreadCount > 0 && <span className="notification-badge"></span>}
             </button>
-            <button className="icon-btn-round" aria-label="Settings" onClick={() => alert('Settings feature is coming soon.')}>
+            <button className="icon-btn-round" aria-label="Settings" onClick={() => navigate('/owner/settings')}>
               <Settings />
             </button>
             <div className="user-avatar-badge">{ownerInitials}</div>

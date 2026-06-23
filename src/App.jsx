@@ -24,11 +24,13 @@ export default function App() {
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route element={<ProtectedRoute role="owner" />}>
-           <Route path="/owner" element={<OwnerDashboardPage initialTab="dashboard" />} />
+          <Route path="/owner" element={<OwnerDashboardPage initialTab="dashboard" />} />
+          <Route path="/owner/applications" element={<OwnerDashboardPage initialTab="applications" />} />
           <Route path="/owner/applications/new" element={<NewApplicationPage />} />
           <Route path="/owner/applications/:applicationId" element={<ApplicationStatusPage />} />
           <Route path="/owner/history" element={<OwnerDashboardPage initialTab="history" />} />
           <Route path="/owner/notifications" element={<OwnerDashboardPage initialTab="notifications" />} />
+          <Route path="/owner/settings" element={<OwnerDashboardPage initialTab="settings" />} />
         </Route>
         <Route element={<ProtectedRoute role="admin" />}>
           <Route path="/admin" element={<AdminDashboardPage initialTab="dashboard" />} />
