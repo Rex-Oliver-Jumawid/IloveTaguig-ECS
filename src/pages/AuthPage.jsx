@@ -259,14 +259,7 @@ export default function AuthPage() {
               </span>
             </label>
           ) : (
-            <>
-              <label class="checkbox-label">
-                <input type="checkbox" name="remember" />
-                <span class="custom-checkbox"></span>
-                <span class="label-text">Remember me</span>
-              </label>
-              <Link to="/forgot-password" class="orange-link">Forgot password?</Link>
-            </>
+            <Link to="/forgot-password" class="orange-link" style={{ marginLeft: 'auto' }}>Forgot password?</Link>
           )}
         </div>
         {register && errors.terms && (

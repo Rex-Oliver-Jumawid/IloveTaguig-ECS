@@ -745,17 +745,59 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   width: 100%;
 }
 
+@media (min-width: 900px) {
+  .app-container {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
 .left-panel {
   flex: 1;
   min-height: 100vh;
   background: var(--bg-left);
-  padding: 64px 80px;
+  padding: clamp(32px, 5vh, 64px) clamp(40px, 6vw, 80px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   overflow: hidden;
   color: var(--white);
+}
+
+@media (min-width: 900px) {
+  .left-panel {
+    height: 100vh;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 800px) {
+  .left-panel {
+    padding: 24px clamp(32px, 5vw, 64px);
+  }
+  .panel-main {
+    margin: 16px 0;
+  }
+  .main-heading {
+    font-size: 2.25rem;
+    margin-bottom: 8px;
+  }
+  .main-description {
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+  }
+  .features-list {
+    gap: 8px;
+  }
+  .feature-card {
+    padding: 8px 12px;
+  }
+  .feature-card h3 {
+    font-size: 0.85rem;
+  }
+  .feature-card p {
+    font-size: 0.75rem;
+  }
 }
 
 /* Background Backdrop Circles */
@@ -839,7 +881,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 
 /* Main Panel Body */
 .panel-main {
-  margin: 64px 0;
+  margin: clamp(24px, 4vh, 64px) 0;
   max-width: 480px;
   z-index: 10;
 }
@@ -869,10 +911,10 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 
 .main-heading {
   font-family: var(--font-serif);
-  font-size: 3.5rem;
+  font-size: clamp(2.5rem, 5vh, 3.5rem);
   font-weight: 700;
   line-height: 1.1;
-  margin-bottom: 20px;
+  margin-bottom: clamp(10px, 1.5vh, 20px);
   letter-spacing: -0.01em;
 }
 
@@ -885,21 +927,21 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   font-size: 1.05rem;
   line-height: 1.6;
   opacity: 0.85;
-  margin-bottom: 40px;
+  margin-bottom: clamp(20px, 3vh, 40px);
 }
 
 /* Feature Cards */
 .features-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: clamp(12px, 2vh, 20px);
 }
 
 .feature-card {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  padding: 16px;
+  padding: clamp(10px, 1.5vh, 16px);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
@@ -986,12 +1028,18 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   flex: 1;
   min-height: 100vh;
   background-color: var(--white);
-  padding: 64px;
+  padding: clamp(32px, 5vh, 64px) clamp(32px, 4vw, 64px);
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
   overflow-y: auto;
+}
+
+@media (min-width: 900px) {
+  .right-panel {
+    height: 100vh;
+  }
 }
 
 .top-glow {
@@ -1010,7 +1058,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   max-width: 448px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: clamp(16px, 3vh, 32px);
   z-index: 10;
 }
 
@@ -1032,7 +1080,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--slate-500);
-  padding: 10px 0;
+  padding: clamp(8px, 1.2vh, 10px) 0;
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.25s ease;
@@ -1059,7 +1107,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 
 .form-heading h2 {
   font-family: var(--font-serif);
-  font-size: 2.25rem;
+  font-size: clamp(1.8rem, 3.5vh, 2.25rem);
   font-weight: 700;
   color: var(--slate-900);
   letter-spacing: -0.01em;
@@ -1078,7 +1126,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 #auth-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: clamp(12px, 2vh, 20px);
 }
 
 .input-group, .field-group {
@@ -1106,7 +1154,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   width: 100%;
   font-family: var(--font-sans);
   font-size: 0.95rem;
-  padding: 14px 16px 14px 44px; /* Space for left icon */
+  padding: clamp(10px, 1.5vh, 14px) 16px clamp(10px, 1.5vh, 14px) 44px; /* Space for left icon */
   border: 1px solid var(--slate-200);
   border-radius: 8px;
   background-color: rgba(249, 250, 251, 0.5);
@@ -1120,7 +1168,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   width: 100%;
   font-family: var(--font-sans);
   font-size: 0.95rem;
-  padding: 14px 16px;
+  padding: clamp(10px, 1.5vh, 14px) 16px;
   border: 1px solid var(--slate-200);
   border-radius: 8px;
   background-color: rgba(249, 250, 251, 0.5);
@@ -1290,7 +1338,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   background-color: var(--orange-primary);
   color: var(--white);
   border: none;
-  padding: 14px;
+  padding: clamp(10px, 1.5vh, 14px);
   border-radius: 8px;
   cursor: pointer;
   box-shadow: 0 4px 6px -1px rgba(240, 128, 36, 0.2);
@@ -1353,7 +1401,7 @@ button:disabled {
 .alternative-login {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: clamp(12px, 2vh, 20px);
 }
 
 .divider-row {
@@ -1382,7 +1430,7 @@ button:disabled {
   background-color: var(--white);
   border: 1px solid var(--slate-200);
   border-radius: 8px;
-  padding: 14px;
+  padding: clamp(10px, 1.5vh, 14px);
   font-family: var(--font-mono);
   font-size: 0.9rem;
   color: var(--slate-900);
