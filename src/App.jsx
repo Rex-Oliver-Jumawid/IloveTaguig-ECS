@@ -8,7 +8,6 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminApplicationReviewPage from './pages/AdminApplicationReviewPage'
 import OwnerDashboardPage from './pages/OwnerDashboardPage'
-import NewApplicationPage from './pages/NewApplicationPage'
 import ApplicationStatusPage from './pages/ApplicationStatusPage'
 import AdminGeneratedClearancePage from './pages/AdminGeneratedClearancePage'
 
@@ -26,7 +25,7 @@ export default function App() {
         <Route element={<ProtectedRoute role="owner" />}>
           <Route path="/owner" element={<OwnerDashboardPage initialTab="dashboard" />} />
           <Route path="/owner/applications" element={<OwnerDashboardPage initialTab="applications" />} />
-          <Route path="/owner/applications/new" element={<NewApplicationPage />} />
+          <Route path="/owner/applications/new" element={<OwnerDashboardPage initialTab="new-application" />} />
           <Route path="/owner/applications/:applicationId" element={<ApplicationStatusPage />} />
           <Route path="/owner/history" element={<OwnerDashboardPage initialTab="history" />} />
           <Route path="/owner/notifications" element={<OwnerDashboardPage initialTab="notifications" />} />

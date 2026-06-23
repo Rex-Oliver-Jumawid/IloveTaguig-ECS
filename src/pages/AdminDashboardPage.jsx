@@ -494,7 +494,7 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
 
         {/* Notifications Tab */}
         {activeTab === 'notifications' ? (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="admin-notifications" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             <NotificationsView
               user={user}
               applications={applications}
@@ -507,12 +507,12 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
           </div>
 
         ) : activeTab === 'settings' ? (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="admin-settings" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             <SettingsView profile={profile} user={user} />
           </div>
 
         ) : activeTab === 'applications' ? (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="admin-applications" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             <HistoryView
               applications={filteredApplicationsByOwner}
               headerTitle="Applications"
@@ -527,7 +527,7 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
           </div>
 
         ) : activeTab === 'owners' ? (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="admin-owners" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             <OwnersView
               owners={owners}
               onViewApplications={(owner) => {
@@ -538,13 +538,13 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
           </div>
 
         ) : activeTab === 'printqueue' ? (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="admin-printqueue" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             <PrintQueueView />
           </div>
 
         ) : (
           /* Dashboard / Applications / Pending / Print Queue / Applicants tabs */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+          <div key="admin-dashboard" className="owner-tab-transition" style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
             {/* Dashboard Header */}
             <div className="figma-admin-dashboard-header">
               <div className="figma-admin-dashboard-title">

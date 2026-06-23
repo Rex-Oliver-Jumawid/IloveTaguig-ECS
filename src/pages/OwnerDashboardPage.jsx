@@ -26,10 +26,14 @@ import {
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import { toOwnerVisibleApplications } from '../lib/ownerApplication'
+import { usePersistentBoolean } from '../lib/usePersistentBoolean'
 import ApplicationStatusView from '../components/ApplicationStatusView'
 import SettingsView from '../components/SettingsView'
 import HistoryView from '../components/HistoryView'
 import NotificationsView from '../components/NotificationsView'
+import NewApplicationPage from './NewApplicationPage'
+
+const OWNER_SIDEBAR_MINIMIZED_KEY = 'ownerSidebarMinimized'
 
 export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
   const { profile, user, signOut } = useAuth()
@@ -38,7 +42,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
+  const [isSidebarMinimized, , toggleSidebarMinimized] = usePersistentBoolean(OWNER_SIDEBAR_MINIMIZED_KEY)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isAlertDismissed, setIsAlertDismissed] = useState(false)
   const [selectedApp, setSelectedApp] = useState(null)
@@ -426,23 +430,31 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
             <button 
               type="button" 
               className="sidebar-toggle-btn-topbar" 
-              onClick={() => setIsSidebarMinimized(prev => !prev)}
+              onClick={toggleSidebarMinimized}
               aria-label={isSidebarMinimized ? "Expand sidebar" : "Minimize sidebar"}
               title={isSidebarMinimized ? "Expand sidebar" : "Minimize sidebar"}
             >
               <PanelLeft />
             </button>
-            <div className="search-wrapper">
-              <Search className="search-icon" />
-              <input 
-                type="text" 
-                className="search-input" 
-                id="search-bar" 
-                placeholder="Search applications by ID or business name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+            {activeTab === 'new-application' ? (
+              <div className="new-app-breadcrumbs">
+                <Link to="/owner" className="breadcrumb-link">Dashboard</Link>
+                <ChevronRight className="breadcrumb-separator" size={12} />
+                <span className="breadcrumb-current">New Application</span>
+              </div>
+            ) : (
+              <div className="search-wrapper">
+                <Search className="search-icon" />
+                <input 
+                  type="text" 
+                  className="search-input" 
+                  id="search-bar" 
+                  placeholder="Search applications by ID or business name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
 
@@ -471,8 +483,12 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
           </div>
         </header>
 
-        {activeTab === 'dashboard' ? (
-          <>
+        {activeTab === 'new-application' ? (
+          <div key="new-application" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
+            <NewApplicationPage onCancel={() => navigate('/owner')} />
+          </div>
+        ) : activeTab === 'dashboard' ? (
+          <div key="dashboard" className="owner-applications-tab-view owner-tab-transition dashboard-tab-view" style={{ padding: '0 0 24px 0' }}>
             {/* Welcome Section */}
             <section className="welcome-section">
               <div className="welcome-text">
@@ -747,13 +763,13 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
 
               </section>
             </div>
-          </>
+          </div>
         ) : activeTab === 'settings' ? (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="settings" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             <SettingsView profile={profile} user={user} />
           </div>
         ) : activeTab === 'history' ? (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="history" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             <HistoryView 
               applications={applications} 
               onSelectApplication={(app) => {
@@ -762,7 +778,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
             />
           </div>
         ) : activeTab === 'notifications' ? (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="notifications" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             <NotificationsView 
               user={user}
               applications={applications}
@@ -775,7 +791,7 @@ export default function OwnerDashboardPage({ initialTab = 'dashboard' }) {
             />
           </div>
         ) : (
-          <div className="owner-applications-tab-view" style={{ padding: '0 0 24px 0' }}>
+          <div key="applications" className="owner-applications-tab-view owner-tab-transition" style={{ padding: '0 0 24px 0' }}>
             {currentActiveApp ? (
               <ApplicationStatusView
                 application={currentActiveApp}

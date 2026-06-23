@@ -2181,6 +2181,22 @@ button:disabled {
   background-color: #F4F7F7;
 }
 
+.owner-tab-transition {
+  animation: ownerTabSlideIn 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+@keyframes ownerTabSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 /* Sticky Topbar */
 .top-bar {
   display: flex;
@@ -8594,4 +8610,3 @@ button:disabled {
 .help-dot--proceed { background-color: #10b981; }
 .help-dot--complete { background-color: #047857; }
 .help-dot--rejected { background-color: #6b7280; }
-
