@@ -706,7 +706,7 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
                               <th>Business Type</th>
                               <th>Submitted</th>
                               <th>Status</th>
-                              <th style={{ textAlign: 'right' }}>Actions</th>
+                              <th style={{ textAlign: 'center' }}>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -744,7 +744,7 @@ export default function AdminDashboardPage({ initialTab = 'dashboard' }) {
                                     {getStatusLabel(item.status)}
                                   </span>
                                 </td>
-                                <td style={{ textAlign: 'right' }}>
+                                <td style={{ textAlign: 'center' }}>
                                   <div className="figma-admin-action-cell">
                                     <Link to={`/admin/applications/${item.id}`} className="figma-admin-table-action-btn">
                                       <Eye size={12} />

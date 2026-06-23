@@ -2552,8 +2552,9 @@ button:disabled {
 /* Fixed cell content alignment */
 .applications-table th.th-actions,
 .applications-table td.td-actions {
-  text-align: right;
-  padding-right: 28px;
+  text-align: center;
+  padding-right: 14px;
+  padding-left: 14px;
 }
 
 /* High Fidelity Monospace Code Badge for Application ID */
@@ -4713,22 +4714,24 @@ button:disabled {
   overflow: visible;
 }
 
-/* column widths — owner 6 cols: APPLICATION | BUSINESS | DATE_SUB | DATE_PROC | PROC_TIME | STATUS */
-.history-data-table th:nth-child(1) { width: 20%; }
-.history-data-table th:nth-child(2) { width: 22%; }
+/* column widths — owner 7 cols: APPLICATION | BUSINESS | DATE_SUB | DATE_PROC | PROC_TIME | STATUS | ACTIONS */
+.history-data-table th:nth-child(1) { width: 18%; }
+.history-data-table th:nth-child(2) { width: 20%; }
 .history-data-table th:nth-child(3) { width: 12%; }
 .history-data-table th:nth-child(4) { width: 12%; }
 .history-data-table th:nth-child(5) { width: 8%; }
-.history-data-table th:nth-child(6) { width: 26%; }
+.history-data-table th:nth-child(6) { width: 18%; }
+.history-data-table th:nth-child(7) { width: 12%; }
 
-/* admin 7-col override: APPLICATION | APPLICANT | BUSINESS | DATE_SUB | DATE_PROC | PROC_TIME | STATUS */
-.history-table-admin .history-data-table th:nth-child(1) { width: 15%; }
-.history-table-admin .history-data-table th:nth-child(2) { width: 13%; }
-.history-table-admin .history-data-table th:nth-child(3) { width: 17%; }
-.history-table-admin .history-data-table th:nth-child(4) { width: 11%; }
-.history-table-admin .history-data-table th:nth-child(5) { width: 11%; }
+/* admin 8-col override: APPLICATION | APPLICANT | BUSINESS | DATE_SUB | DATE_PROC | PROC_TIME | STATUS | ACTIONS */
+.history-table-admin .history-data-table th:nth-child(1) { width: 14%; }
+.history-table-admin .history-data-table th:nth-child(2) { width: 12%; }
+.history-table-admin .history-data-table th:nth-child(3) { width: 16%; }
+.history-table-admin .history-data-table th:nth-child(4) { width: 10%; }
+.history-table-admin .history-data-table th:nth-child(5) { width: 10%; }
 .history-table-admin .history-data-table th:nth-child(6) { width: 8%; }
-.history-table-admin .history-data-table th:nth-child(7) { width: 25%; }
+.history-table-admin .history-data-table th:nth-child(7) { width: 18%; }
+.history-table-admin .history-data-table th:nth-child(8) { width: 12%; }
 
 .history-table-row {
   border-bottom: 1px solid #EFF2F5;
@@ -6295,7 +6298,7 @@ button:disabled {
 .figma-admin-action-cell {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 6px;
 }
 

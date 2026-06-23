@@ -304,12 +304,13 @@ export default function HistoryView({
                 <th scope="col">PROCESSED</th>
                 <th scope="col">PROC. TIME</th>
                 <th scope="col">STATUS</th>
+                <th scope="col" style={{ textAlign: 'center' }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {paginatedApps.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="table-empty-row">
+                  <td colSpan={showApplicant ? 8 : 7} className="table-empty-row">
                     <FileText size={24} className="empty-icon" />
                     <p>No matching applications in history.</p>
                   </td>
@@ -384,14 +385,17 @@ export default function HistoryView({
                         </div>
                       </td>
 
-                      {/* Column 6: Status & Inline Action Button */}
+                      {/* Column 6: Status */}
                       <td>
-                        <div className="status-column-wrap">
-                          <span className={`status-badge-capsule ${getStatusBadgeClass(app.status)}`}>
-                            <span className="badge-dot" />
-                            <span>{getStatusLabel(app.status)}</span>
-                          </span>
-                          
+                        <span className={`status-badge-capsule ${getStatusBadgeClass(app.status)}`}>
+                          <span className="badge-dot" />
+                          <span>{getStatusLabel(app.status)}</span>
+                        </span>
+                      </td>
+
+                      {/* Column 7: Actions */}
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                           {app.status === 'Action Required' ? (
                             <button
                               type="button"
