@@ -8,7 +8,6 @@ import {
   UploadCloud, 
   X,
   Home,
-  Award,
   History,
   Settings,
   LogOut,
