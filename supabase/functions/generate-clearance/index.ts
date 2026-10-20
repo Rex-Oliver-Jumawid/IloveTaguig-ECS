@@ -1,6 +1,27 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { PDFDocument, StandardFonts } from 'npm:pdf-lib@1.17.1'
-import { templateBytes } from './template.ts'
+// Immutable public PDF template, loaded lazily and cached for this runtime instance.
+// Keep this pinned to a commit containing the validated fillable PDF.
+const templateUrl = 'https://raw.githubusercontent.com/Rex-Oliver-Jumawid/IloveTaguig-ECS/01143cbfbcee62ba078e1810277683f6cdb35e1b/assets/templates/acroformtemplates/BARANGAY_CLEARANCE_runtime_template.pdf'
+let templateLoad: Promise<Uint8Array> | undefined
+
+const loadTemplateBytes = (): Promise<Uint8Array> => {
+  if (!templateLoad) {
+    templateLoad = fetch(templateUrl)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Clearance template fetch failed: HTTP ${response.status}`)
+        const bytes = new Uint8Array(await response.arrayBuffer())
+        if (bytes.length === 0) throw new Error('Clearance template is empty')
+        return bytes
+      })
+      .catch((error) => {
+        templateLoad = undefined
+        throw error
+      })
+  }
+  return templateLoad
+}
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,7 +64,7 @@ Deno.serve(async (request) => {
     })
     if (prepareError) return json({ error: prepareError.message }, 403)
 
-    const pdf = await PDFDocument.load(templateBytes)
+    const pdf = await PDFDocument.load(await loadTemplateBytes())
     const form = pdf.getForm()
     const font = await pdf.embedFont(StandardFonts.Helvetica)
     const issued = new Date(clearance.approved_at)
