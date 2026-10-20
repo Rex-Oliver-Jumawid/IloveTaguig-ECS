@@ -39,6 +39,8 @@ Deno.serve(async (request) => {
     })
     const { data: clearance, error } = await userClient.rpc('prepare_clearance', {
       application_id: applicationId,
+      admin_remarks: '',
+      checklist: {},
     })
     if (error) return json({ error: error.message }, 403)
 
