@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { PDFDocument, StandardFonts } from 'npm:pdf-lib@1.17.1'
+import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1'
 // Immutable public PDF template, loaded lazily and cached for this runtime instance.
 // Keep this pinned to a commit containing the validated fillable PDF.
 const templateUrl = 'https://raw.githubusercontent.com/Rex-Oliver-Jumawid/IloveTaguig-ECS/01143cbfbcee62ba078e1810277683f6cdb35e1b/assets/templates/acroformtemplates/BARANGAY_CLEARANCE_runtime_template.pdf'
@@ -43,8 +43,7 @@ Deno.serve(async (request) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!supabaseUrl || !anonKey || !serviceRoleKey) return json({ error: 'Function is not configured' }, 500)
+  if (!supabaseUrl || !anonKey) return json({ error: 'Function is not configured' }, 500)
 
   try {
     const { applicationId, remarks = '', checklist = {} } = await request.json()
@@ -55,7 +54,6 @@ Deno.serve(async (request) => {
       global: { headers: { Authorization: authorization } },
       auth: { persistSession: false },
     })
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } })
 
     const { data: clearance, error: prepareError } = await userClient.rpc('prepare_clearance', {
       application_id: applicationId,
@@ -92,20 +90,27 @@ Deno.serve(async (request) => {
     form.updateFieldAppearances(font)
     form.flatten()
 
-    const path = `${applicationId}/${clearance.reference_no}.pdf`
+    // Deliberately download-only: no Storage upload or official issuance status changes.
+    // The PDF preserves the original template but is explicitly an academic demonstration.
+    const markerFont = await pdf.embedFont(StandardFonts.HelveticaBold)
+    pdf.setTitle('Barangay Business Clearance - Academic Demo')
+    pdf.setSubject('Classroom demonstration only')
+    for (const page of pdf.getPages()) {
+      page.drawText('ACADEMIC DEMO', {
+        x: 24, y: 16, size: 10, font: markerFont, color: rgb(0.25, 0.25, 0.25),
+      })
+    }
+
     const bytes = await pdf.save()
-    const { error: uploadError } = await adminClient.storage.from('generated-clearances').upload(path, bytes, {
-      contentType: 'application/pdf', upsert: true,
+    return new Response(bytes, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="Barangay-Clearance-Demo.pdf"',
+        'Cache-Control': 'private, no-store',
+      },
     })
-    if (uploadError) return json({ error: `PDF storage failed: ${uploadError.message}`, retryable: true }, 500)
-
-    const { error: finalizeError } = await userClient.rpc('finalize_clearance', {
-      application_id: applicationId,
-      clearance_path: path,
-    })
-    if (finalizeError) return json({ error: finalizeError.message, retryable: true }, 409)
-
-    return json({ applicationId, referenceNo: clearance.reference_no, status: 'Proceed to Barangay Hall' })
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Clearance generation failed', retryable: true }, 500)
   }
