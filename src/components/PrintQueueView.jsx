@@ -99,45 +99,28 @@ export default function PrintQueueView() {
     setGenerating(prev => ({ ...prev, [app.id]: true }))
     setCardErrors(prev => ({ ...prev, [app.id]: '' }))
 
-    let objectUrl = ''
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData?.session?.access_token
       if (!token) throw new Error('Not authenticated')
 
       const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-clearance`
-      const response = await fetch(fnUrl, {
+      const res = await fetch(fnUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ applicationId: app.id }),
       })
 
-      if (!response.ok) {
-        const details = await response.json().catch(() => null)
-        throw new Error(details?.error || `PDF generation failed (HTTP ${response.status})`)
-      }
-      if (!(response.headers.get('content-type') || '').includes('application/pdf')) {
-        throw new Error('The PDF service returned an unexpected response')
-      }
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error ?? 'Certificate generation failed')
 
-      const pdfBlob = await response.blob()
-      if (!pdfBlob.size) throw new Error('The PDF service returned an empty file')
-      objectUrl = URL.createObjectURL(pdfBlob)
-
-      const anchor = document.createElement('a')
-      anchor.href = objectUrl
-      anchor.download = `Barangay-Clearance-Demo-${getAppId(app).replace(/[^A-Za-z0-9-]/g, '-')}.pdf`
-      document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
+      window.location.assign(`/admin/clearances/${app.id}`)
     } catch (err) {
       setCardErrors(prev => ({ ...prev, [app.id]: err.message }))
     } finally {
-      if (objectUrl) window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
       setGenerating(prev => ({ ...prev, [app.id]: false }))
     }
   }
@@ -238,7 +221,7 @@ export default function PrintQueueView() {
             <h1 className="pq-title">Print <em>Queue</em></h1>
           </div>
           <p className="pq-subtitle">
-            Approved applications ready for classroom PDF previews.
+            Approved applications ready for certificate generation and physical handover.
           </p>
         </div>
         <button
@@ -267,14 +250,14 @@ export default function PrintQueueView() {
           <FileCheck2 size={16} />
           <div className="pq-pill-content">
             <span className="pq-pill-value">{generatedCount}</span>
-            <span className="pq-pill-label">Previously Issued</span>
+            <span className="pq-pill-label">Certificate Generated</span>
           </div>
         </div>
         <div className="pq-summary-pill pq-pill-orange">
           <AlertTriangle size={16} />
           <div className="pq-pill-content">
             <span className="pq-pill-value">{apps.length - generatedCount}</span>
-            <span className="pq-pill-label">Demo Ready</span>
+            <span className="pq-pill-label">Pending Generation</span>
           </div>
         </div>
       </div>
@@ -381,7 +364,7 @@ export default function PrintQueueView() {
                   <div className="pq-meta-item">
                     <span className="pq-meta-label">Certificate</span>
                     <span className={`pq-meta-value ${hasPdf ? 'pq-meta-ready' : 'pq-meta-pending'}`}>
-                      {hasPdf ? '✓ Stored' : '✓ Demo download available'}
+                      {hasPdf ? '✓ Generated' : '○ Not yet generated'}
                     </span>
                   </div>
                 </div>
@@ -426,7 +409,7 @@ export default function PrintQueueView() {
                       ) : (
                         <Printer size={14} />
                       )}
-                      {isGenerating ? 'Preparing PDF…' : 'Download Demo PDF'}
+                      {isGenerating ? 'Generating…' : 'Generate Certificate'}
                     </button>
                   )}
 
